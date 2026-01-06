@@ -29,7 +29,7 @@ const Login = () => {
         storage.setItem('user', JSON.stringify(data.user));
         storage.setItem('token', data.token); // If you are using tokens
         
-        alert('Login Successful!');
+        // alert('Login Successful!');
         navigate('/dashboard');
       } else {
         alert(`Login Failed: ${data.message || data.error}`);

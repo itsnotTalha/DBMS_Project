@@ -50,7 +50,7 @@ const Register = () => {
       const data = await response.json();
       
       if (response.ok) {
-        alert('Registration Successful!');
+        // alert('Registration Successful!');
         // Redirect to login page using React Router
         navigate('/login');
       } else {
