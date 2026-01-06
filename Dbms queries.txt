@@ -1,0 +1,262 @@
+-- ========================================================
+-- AMANAH: SUPPLY CHAIN & ANTI-COUNTERFEIT SYSTEM
+-- Database: supply_chain_db
+-- ========================================================
+
+-- ========================================================
+-- 1. USER MANAGEMENT MODULE
+-- ========================================================
+
+CREATE TABLE Users (
+    user_id INT PRIMARY KEY AUTO_INCREMENT,
+    email VARCHAR(255) UNIQUE NOT NULL,
+    password_hash VARCHAR(255) NOT NULL,
+    role ENUM('Admin', 'Manufacturer', 'Retailer', 'Customer') NOT NULL,
+    is_active BOOLEAN DEFAULT TRUE,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE Admins (
+    admin_id INT PRIMARY KEY,
+    permissions_level VARCHAR(50) DEFAULT 'Standard',
+    department VARCHAR(100),
+    FOREIGN KEY (admin_id) REFERENCES Users(user_id) ON DELETE CASCADE
+);
+
+CREATE TABLE Manufacturers (
+    manufacturer_id INT PRIMARY KEY,
+    company_name VARCHAR(150) NOT NULL,
+    license_number VARCHAR(100) UNIQUE NOT NULL,
+    contract_details TEXT,
+    FOREIGN KEY (manufacturer_id) REFERENCES Users(user_id) ON DELETE CASCADE
+);
+
+CREATE TABLE Retailers (
+    retailer_id INT PRIMARY KEY,
+    business_name VARCHAR(150) NOT NULL,
+    tax_id VARCHAR(50) UNIQUE NOT NULL,
+    headquarters_address TEXT NOT NULL,
+    FOREIGN KEY (retailer_id) REFERENCES Users(user_id) ON DELETE CASCADE
+);
+
+CREATE TABLE Customers (
+    customer_id INT PRIMARY KEY,
+    first_name VARCHAR(100) NOT NULL,
+    last_name VARCHAR(100) NOT NULL,
+    phone_number VARCHAR(20),
+    FOREIGN KEY (customer_id) REFERENCES Users(user_id) ON DELETE CASCADE
+);
+
+-- ========================================================
+-- 2. PRODUCT & SUPPLY CHAIN CORE
+-- ========================================================
+
+CREATE TABLE Product_Definitions (
+    product_def_id INT PRIMARY KEY AUTO_INCREMENT,
+    manufacturer_id INT NOT NULL,
+    name VARCHAR(200) NOT NULL,
+    description TEXT,
+    category VARCHAR(100),
+    base_price DECIMAL(10,2) NOT NULL,
+    image_url VARCHAR(500),
+    is_active BOOLEAN DEFAULT TRUE,
+    FOREIGN KEY (manufacturer_id) REFERENCES Manufacturers(manufacturer_id)
+);
+
+CREATE TABLE B2B_Orders (
+    b2b_order_id INT PRIMARY KEY AUTO_INCREMENT,
+    retailer_id INT NOT NULL,
+    manufacturer_id INT NOT NULL,
+    order_date DATETIME DEFAULT CURRENT_TIMESTAMP,
+    status ENUM('Pending','Approved','Shipped','Delivered') DEFAULT 'Pending',
+    FOREIGN KEY (retailer_id) REFERENCES Retailers(retailer_id),
+    FOREIGN KEY (manufacturer_id) REFERENCES Manufacturers(manufacturer_id)
+);
+
+CREATE TABLE Batches (
+    batch_id INT PRIMARY KEY AUTO_INCREMENT,
+    manufacturer_id INT NOT NULL,
+    retailer_order_id INT,
+    manufacturing_date DATE NOT NULL,
+    expiry_date DATE NOT NULL,
+    batch_code VARCHAR(100) UNIQUE,
+    FOREIGN KEY (manufacturer_id) REFERENCES Manufacturers(manufacturer_id),
+    FOREIGN KEY (retailer_order_id) REFERENCES B2B_Orders(b2b_order_id)
+);
+
+CREATE TABLE Product_Items (
+    item_id INT PRIMARY KEY AUTO_INCREMENT,
+    batch_id INT NOT NULL,
+    product_def_id INT NOT NULL,
+    serial_code VARCHAR(100) UNIQUE NOT NULL,
+    authentication_hash VARCHAR(255) NOT NULL,
+    status ENUM('Manufacturing','In_Transit','In_Inventory','Sold','Recalled') DEFAULT 'Manufacturing',
+    FOREIGN KEY (batch_id) REFERENCES Batches(batch_id),
+    FOREIGN KEY (product_def_id) REFERENCES Product_Definitions(product_def_id)
+);
+
+-- ========================================================
+-- 3. BLOCKCHAIN-STYLE TRACEABILITY LEDGER
+-- ========================================================
+
+CREATE TABLE Product_Transactions (
+    tx_id INT AUTO_INCREMENT PRIMARY KEY,
+    item_id INT NOT NULL,
+    action ENUM('Manufactured','Shipped','Received','Stored','Sold','Returned','Destroyed'),
+    actor_user_id INT,
+    location VARCHAR(255),
+    previous_hash VARCHAR(255),
+    current_hash VARCHAR(255),
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (item_id) REFERENCES Product_Items(item_id),
+    FOREIGN KEY (actor_user_id) REFERENCES Users(user_id)
+);
+
+-- ========================================================
+-- 4. RETAIL OPERATIONS & INVENTORY
+-- ========================================================
+
+CREATE TABLE Retailer_Outlets (
+    outlet_id INT PRIMARY KEY AUTO_INCREMENT,
+    retailer_id INT NOT NULL,
+    location_name VARCHAR(100),
+    address TEXT NOT NULL,
+    geo_lat DECIMAL(10,8),
+    geo_lng DECIMAL(11,8),
+    FOREIGN KEY (retailer_id) REFERENCES Retailers(retailer_id)
+);
+
+CREATE TABLE Inventory (
+    inventory_id INT PRIMARY KEY AUTO_INCREMENT,
+    outlet_id INT NOT NULL,
+    product_def_id INT NOT NULL,
+    quantity_on_hand INT DEFAULT 0,
+    aisle VARCHAR(50),
+    shelf VARCHAR(50),
+    section VARCHAR(50),
+    last_updated TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    FOREIGN KEY (outlet_id) REFERENCES Retailer_Outlets(outlet_id),
+    FOREIGN KEY (product_def_id) REFERENCES Product_Definitions(product_def_id),
+    UNIQUE KEY unique_inventory (outlet_id, product_def_id)
+);
+
+-- ========================================================
+-- 5. CUSTOMER SALES & DELIVERY
+-- ========================================================
+
+CREATE TABLE Customer_Orders (
+    order_id INT PRIMARY KEY AUTO_INCREMENT,
+    customer_id INT NOT NULL,
+    outlet_id INT NOT NULL,
+    order_date DATETIME DEFAULT CURRENT_TIMESTAMP,
+    total_amount DECIMAL(10,2) NOT NULL,
+    status ENUM('Processing','Out_for_Delivery','Completed','Cancelled') DEFAULT 'Processing',
+    FOREIGN KEY (customer_id) REFERENCES Customers(customer_id),
+    FOREIGN KEY (outlet_id) REFERENCES Retailer_Outlets(outlet_id)
+);
+
+CREATE TABLE Order_Items (
+    order_item_id INT PRIMARY KEY AUTO_INCREMENT,
+    order_id INT NOT NULL,
+    product_def_id INT NOT NULL,
+    quantity INT NOT NULL,
+    unit_price DECIMAL(10,2) NOT NULL,
+    FOREIGN KEY (order_id) REFERENCES Customer_Orders(order_id) ON DELETE CASCADE,
+    FOREIGN KEY (product_def_id) REFERENCES Product_Definitions(product_def_id)
+);
+
+CREATE TABLE Deliveries (
+    delivery_id INT PRIMARY KEY AUTO_INCREMENT,
+    order_id INT NOT NULL,
+    tracking_number VARCHAR(100) UNIQUE,
+    current_location VARCHAR(255),
+    estimated_arrival DATETIME,
+    status ENUM('Dispatched','In_Transit','Delivered') DEFAULT 'Dispatched',
+    FOREIGN KEY (order_id) REFERENCES Customer_Orders(order_id)
+);
+
+-- ========================================================
+-- 6. IoT & COLD-CHAIN MONITORING
+-- ========================================================
+
+CREATE TABLE IoT_Readings (
+    reading_id INT AUTO_INCREMENT PRIMARY KEY,
+    batch_id INT NOT NULL,
+    temperature DECIMAL(5,2),
+    humidity DECIMAL(5,2),
+    location VARCHAR(255),
+    recorded_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (batch_id) REFERENCES Batches(batch_id)
+);
+
+-- ========================================================
+-- 7. QR SCAN & COUNTERFEIT DETECTION
+-- ========================================================
+
+CREATE TABLE QR_Scan_Logs (
+    scan_id INT AUTO_INCREMENT PRIMARY KEY,
+    serial_code VARCHAR(100),
+    scanned_by_user INT,
+    geo_lat DECIMAL(10,8),
+    geo_lng DECIMAL(11,8),
+    scan_result ENUM('Valid','Duplicate','Fake'),
+    scan_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (scanned_by_user) REFERENCES Users(user_id)
+);
+
+-- ========================================================
+-- 8. PRODUCT RECALL MANAGEMENT
+-- ========================================================
+
+CREATE TABLE Recalls (
+    recall_id INT AUTO_INCREMENT PRIMARY KEY,
+    batch_id INT NOT NULL,
+    reason TEXT,
+    initiated_by INT,
+    recall_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    status ENUM('Active','Resolved') DEFAULT 'Active',
+    FOREIGN KEY (batch_id) REFERENCES Batches(batch_id),
+    FOREIGN KEY (initiated_by) REFERENCES Users(user_id)
+);
+
+-- ========================================================
+-- 9. AI RISK & ANOMALY ALERTS
+-- ========================================================
+
+CREATE TABLE Risk_Alerts (
+    alert_id INT AUTO_INCREMENT PRIMARY KEY,
+    alert_type VARCHAR(100),
+    severity ENUM('Low','Medium','High'),
+    related_entity VARCHAR(100),
+    entity_id INT,
+    description TEXT,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- ========================================================
+-- 10. AUDIT & TRUST
+-- ========================================================
+
+CREATE TABLE Audit_Logs (
+    log_id INT PRIMARY KEY AUTO_INCREMENT,
+    user_id INT,
+    action VARCHAR(255) NOT NULL,
+    timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (user_id) REFERENCES Users(user_id) ON DELETE SET NULL
+);
+
+CREATE TABLE Product_Reviews (
+    review_id INT PRIMARY KEY AUTO_INCREMENT,
+    product_def_id INT NOT NULL,
+    customer_id INT NOT NULL,
+    rating TINYINT CHECK (rating BETWEEN 1 AND 5),
+    comment TEXT,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (product_def_id) REFERENCES Product_Definitions(product_def_id),
+    FOREIGN KEY (customer_id) REFERENCES Customers(customer_id)
+);
+
+-- ========================================================
+-- END OF AMANAH DATABASE SCHEMA
+-- ========================================================
+
