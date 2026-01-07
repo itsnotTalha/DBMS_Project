@@ -1,63 +1,15 @@
-const express = require('express');
+import express from 'express';
+import { getStats, getShipments, getLedger } from '../controllers/dashboardController.js';
+
 const router = express.Router();
-const db = require('../config/db'); // Ensure this points to your database connection file
 
-// 1. Fetch Stats for the Top Cards
-router.get('/stats', async (req, res) => {
-    try {
-        const [batches] = await db.query('SELECT COUNT(*) as count FROM Batches');
-        const [items] = await db.query('SELECT COUNT(*) as count FROM Product_Items');
-        const [transit] = await db.query('SELECT COUNT(*) as count FROM Deliveries WHERE status = "In_Transit"');
-        const [alerts] = await db.query('SELECT COUNT(*) as count FROM Risk_Alerts WHERE severity = "High"');
+// Route: GET /api/dashboard/stats
+router.get('/stats', getStats);
 
-        res.json({
-            batches: batches[0].count,
-            units: items[0].count,
-            transit: transit[0].count,
-            alerts: alerts[0].count
-        });
-    } catch (err) {
-        res.status(500).json({ error: err.message });
-    }
-});
+// Route: GET /api/dashboard/shipments
+router.get('/shipments', getShipments);
 
-// 2. Fetch Shipment Tracking Table Data
-router.get('/shipments', async (req, res) => {
-    try {
-        const query = `
-            SELECT 
-                d.tracking_number as id, 
-                b.batch_code as batch, 
-                d.current_location as dest, 
-                i.temperature as temp, 
-                d.status
-            FROM Deliveries d
-            JOIN Batches b ON d.order_id = b.order_id
-            LEFT JOIN (
-                SELECT batch_id, temperature 
-                FROM IoT_Readings 
-                WHERE (batch_id, recorded_at) IN (SELECT batch_id, MAX(recorded_at) FROM IoT_Readings GROUP BY batch_id)
-            ) i ON b.batch_id = i.batch_id
-            LIMIT 5`;
-        const [rows] = await db.query(query);
-        res.json(rows);
-    } catch (err) {
-        res.status(500).json({ error: err.message });
-    }
-});
+// Route: GET /api/dashboard/ledger
+router.get('/ledger', getLedger);
 
-// 3. Fetch Recent Ledger Events
-router.get('/ledger', async (req, res) => {
-    try {
-        const query = `
-            SELECT action as title, created_at as time, current_hash as hash 
-            FROM Product_Transactions 
-            ORDER BY created_at DESC LIMIT 3`;
-        const [rows] = await db.query(query);
-        res.json(rows);
-    } catch (err) {
-        res.status(500).json({ error: err.message });
-    }
-});
-
-module.exports = router;
+export default router;
