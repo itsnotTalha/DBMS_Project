@@ -1,11 +1,5 @@
--- ========================================================
--- AMANAH: SUPPLY CHAIN & ANTI-COUNTERFEIT SYSTEM
--- Database: supply_chain_db
--- ========================================================
-
--- ========================================================
--- 1. USER MANAGEMENT MODULE
--- ========================================================
+CREATE DATABASE supply_chain_db;
+USE supply_chain_db
 
 CREATE TABLE Users (
     user_id INT PRIMARY KEY AUTO_INCREMENT,
@@ -256,7 +250,5 @@ CREATE TABLE Product_Reviews (
     FOREIGN KEY (customer_id) REFERENCES Customers(customer_id)
 );
 
--- ========================================================
--- END OF AMANAH DATABASE SCHEMA
--- ========================================================
+
 
