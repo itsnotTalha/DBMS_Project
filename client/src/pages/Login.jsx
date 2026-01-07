@@ -4,9 +4,7 @@ import { Link, useNavigate } from 'react-router-dom';
 const Login = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  // 1. Add State for Remember Me
   const [rememberMe, setRememberMe] = useState(false); 
-  
   const navigate = useNavigate();
 
   const handleSubmit = async (e) => {
@@ -22,15 +20,34 @@ const Login = () => {
       const data = await response.json();
 
       if (response.ok) {
-        // 2. Logic: Choose Storage based on Checkbox
+        // 1. Storage Logic
         const storage = rememberMe ? localStorage : sessionStorage;
-
-        // Save data to the selected storage
         storage.setItem('user', JSON.stringify(data.user));
-        storage.setItem('token', data.token); // If you are using tokens
+        storage.setItem('token', data.token);
         
-        // alert('Login Successful!');
-        navigate('/dashboard');
+        // 2. ROLE-BASED REDIRECTION
+        // We use a switch or if-else to send users to their specific routes
+        const userRole = data.user.role;
+
+        switch (userRole) {
+          case 'Manufacturer':
+            navigate('/dashboard'); // Your existing manufacturer dashboard
+            break;
+          case 'Customer':
+            navigate('/customer-dashboard');
+            break;
+          case 'Retailer':
+            navigate('/retailer-dashboard');
+            break;
+          case 'Admin':
+            navigate('/admin-dashboard');
+            break;
+          default:
+            // Fallback for unexpected roles
+            alert('Role not recognized. Contact Administrator.');
+            navigate('/login');
+        }
+
       } else {
         alert(`Login Failed: ${data.message || data.error}`);
       }
@@ -41,17 +58,17 @@ const Login = () => {
   };
 
   return (
+    // ... (Your existing JSX code remains exactly the same)
     <div className="flex w-full h-screen bg-white font-['Poppins']">
+      {/* (Form and image code you provided) */}
       <div className="w-full flex items-center justify-center lg:w-1/2">
         <div className="w-full max-w-md px-8 py-10">
-          
           <div className="mb-10">
             <h1 className="text-3xl font-semibold text-gray-900 mb-2">Welcome back!</h1>
             <p className="text-sm text-gray-500">Enter your Credentials to access your account</p>
           </div>
 
           <form onSubmit={handleSubmit} className="space-y-6">
-            
             <div>
               <label htmlFor="email" className="block text-sm font-semibold text-gray-900 mb-2">Email address</label>
               <input type="email" id="email" placeholder="Enter your email" required
@@ -69,7 +86,6 @@ const Login = () => {
                 className="w-full px-4 py-3 rounded-lg border border-gray-200 text-sm focus:outline-none focus:border-[#3A5B22] focus:ring-1 focus:ring-[#3A5B22] transition duration-200" />
             </div>
 
-            {/* 3. Bind Checkbox to State */}
             <div className="flex items-center">
               <input
                 type="checkbox"
@@ -87,14 +103,14 @@ const Login = () => {
               Login
             </button>
           </form>
-          {/* ... Rest of your footer code ... */}
+
           <div className="mt-6 text-center text-sm text-gray-600">
             Don't have an account? <Link to="/register" className="text-blue-700 font-semibold hover:underline">Sign Up</Link>
           </div>
         </div>
       </div>
-       {/* ... Right side image code ... */}
-       <div className="hidden lg:flex w-1/2 p-6 bg-gray-50 items-center justify-center">
+      
+      <div className="hidden lg:flex w-1/2 p-6 bg-gray-50 items-center justify-center">
         <div className="w-full h-full rounded-[40px] overflow-hidden relative shadow-lg">
           <img
             src="https://images.unsplash.com/photo-1497250681960-ef048c0ab947?ixlib=rb-4.0.3&auto=format&fit=crop&w=1000&q=80"
