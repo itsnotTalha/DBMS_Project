@@ -27,20 +27,20 @@ const Login = () => {
         
         // 2. ROLE-BASED REDIRECTION
         // We use a switch or if-else to send users to their specific routes
-        const userRole = data.user.role;
+        const userRole = data.user.role?.toLowerCase();
 
         switch (userRole) {
-          case 'Manufacturer':
-            navigate('/dashboard'); // Your existing manufacturer dashboard
+          case 'manufacturer':
+            navigate('/manufacturer/Dashboard');
             break;
-          case 'Customer':
-            navigate('/customer-dashboard');
+          case 'customer':
+            navigate('/customer/dashboard');
             break;
-          case 'Retailer':
-            navigate('/retailer-dashboard');
+          case 'retailer':
+            navigate('/retailer/dashboard');
             break;
-          case 'Admin':
-            navigate('/admin-dashboard');
+          case 'admin':
+            navigate('/admin/dashboard');
             break;
           default:
             // Fallback for unexpected roles

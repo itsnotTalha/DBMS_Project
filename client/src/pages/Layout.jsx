@@ -1,14 +1,21 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import axios from 'axios';
-import {
-  LayoutDashboard, Box, Truck, Activity, ShieldCheck,
-  Search, LogOut
-} from 'lucide-react';
+import { LogOut, Menu, X, ChevronDown } from 'lucide-react';
 
-const Layout = ({ children, user, menuItems: customMenuItems }) => {
+/**
+ * Unified Layout Component - Works for all roles
+ * 
+ * Usage:
+ * <Layout user={user} menuItems={manufacturerMenuItems}>
+ *   {children}
+ * </Layout>
+ */
+const Layout = ({ children, user, menuItems = [] }) => {
   const navigate = useNavigate();
   const location = useLocation();
+  const [sidebarOpen, setSidebarOpen] = useState(true);
+  const [userMenuOpen, setUserMenuOpen] = useState(false);
 
   const handleLogout = async () => {
     try {
@@ -22,85 +29,132 @@ const Layout = ({ children, user, menuItems: customMenuItems }) => {
     }
   };
 
-  // Use custom menu items if provided, otherwise use default
-  const menuItems = customMenuItems || [
-    { icon: <LayoutDashboard size={18} />, label: 'Dashboard', path: '/dashboard' },
-    { icon: <Box size={18} />, label: 'Products', path: '/products' },
-    { icon: <Truck size={18} />, label: 'Shipments', path: '/shipments' },
-    { icon: <Activity size={18} />, label: 'IoT Alerts', path: '/iot-alerts' },
-    { icon: <ShieldCheck size={18} />, label: 'Ledger Audit', path: '/ledger-audit' },
-  ];
+  const isActive = (path) => location.pathname === path;
 
   return (
-    <div className="flex min-h-screen bg-slate-50 text-slate-800">
-      <aside className="flex w-64 flex-col bg-slate-900 text-white">
-        <div className="px-6 py-6 border-b border-slate-800 flex items-center gap-3">
-          <div className="bg-emerald-500 p-2 rounded-lg">
-            <ShieldCheck size={18} />
+    <div className="flex min-h-screen bg-slate-50">
+      {/* Sidebar */}
+      <aside className={`fixed left-0 top-0 h-screen bg-slate-900 text-white transition-all duration-300 z-40 ${
+        sidebarOpen ? 'w-64' : 'w-20'
+      }`}>
+        {/* Logo */}
+        <div className="flex items-center justify-between h-20 px-4 border-b border-slate-800">
+          <div className={`flex items-center gap-3 transition-all ${!sidebarOpen && 'justify-center w-full'}`}>
+            <div className="bg-emerald-500 p-2 rounded-lg flex-shrink-0">
+              <svg className="w-5 h-5 text-white" fill="currentColor" viewBox="0 0 20 20">
+                <path d="M10 3.5a6.5 6.5 0 100 13 6.5 6.5 0 000-13zM2 10a8 8 0 1116 0 8 8 0 01-16 0z" />
+              </svg>
+            </div>
+            {sidebarOpen && <span className="font-black text-lg tracking-wide">BESS-PAS</span>}
           </div>
-          <span className="font-black tracking-wide text-lg uppercase">BESS-PAS</span>
         </div>
 
-        <nav className="flex-1 px-4 py-6 space-y-1">
-          {menuItems.map((item) => (
-            <div
-              key={item.path}
-              onClick={() => navigate(item.path)}
-              className={`flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-semibold cursor-pointer transition
-                ${location.pathname === item.path
-                  ? 'bg-emerald-500 text-white shadow'
-                  : 'text-slate-400 hover:bg-slate-800 hover:text-white'
+        {/* Navigation */}
+        <nav className="flex-1 px-3 py-6 space-y-2 overflow-y-auto">
+          {menuItems.length > 0 ? (
+            menuItems.map((item) => (
+              <button
+                key={item.path}
+                onClick={() => navigate(item.path)}
+                className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-semibold transition ${
+                  isActive(item.path)
+                    ? 'bg-emerald-500 text-white shadow-lg'
+                    : 'text-slate-400 hover:bg-slate-800 hover:text-white'
                 }`}
-            >
-              {item.icon} {item.label}
-            </div>
-          ))}
+                title={!sidebarOpen ? item.label : ''}
+              >
+                <span className="flex-shrink-0">{item.icon}</span>
+                {sidebarOpen && <span className="truncate">{item.label}</span>}
+              </button>
+            ))
+          ) : (
+            <p className="text-slate-500 text-xs px-4 py-2">No menu items</p>
+          )}
         </nav>
 
-        <div className="p-4 border-t border-slate-800">
-          <div className="flex items-center gap-3 mb-4 bg-slate-800/50 p-3 rounded-xl">
-            <div className="w-8 h-8 rounded-full bg-emerald-500 flex items-center justify-center font-bold text-xs">
-              {user?.name?.slice(0, 2)}
-            </div>
-            <div className="min-w-0">
-              <p className="text-xs font-semibold truncate">{user?.name}</p>
-              <p className="text-[10px] uppercase text-emerald-400 font-bold">{user?.role}</p>
+        {/* User Menu - Bottom */}
+        <div className="border-t border-slate-800 p-3 space-y-2">
+          <div className={`flex items-center gap-3 px-4 py-2 rounded-lg bg-slate-800 ${!sidebarOpen && 'justify-center'}`}>
+            {sidebarOpen && (
+              <div className="min-w-0">
+                <p className="text-xs font-bold text-slate-300 truncate">{user?.name || 'User'}</p>
+                <p className="text-[10px] text-slate-500 truncate">{user?.role || 'Role'}</p>
+              </div>
+            )}
+            <div className="w-8 h-8 rounded-full bg-emerald-500 flex items-center justify-center text-xs font-bold flex-shrink-0">
+              {user?.name?.charAt(0) || 'U'}
             </div>
           </div>
-
           <button
             onClick={handleLogout}
-            className="w-full flex items-center gap-2 px-4 py-2.5 text-sm font-semibold text-slate-400 hover:text-red-400 hover:bg-red-500/10 rounded-xl transition"
+            className="w-full flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-semibold text-slate-400 hover:bg-slate-800 hover:text-red-400 transition"
+            title={!sidebarOpen ? 'Logout' : ''}
           >
-            <LogOut size={16} /> Sign Out
+            <LogOut size={18} className="flex-shrink-0" />
+            {sidebarOpen && <span>Logout</span>}
           </button>
         </div>
       </aside>
 
-      <main className="flex-1 flex flex-col">
-        <header className="h-20 bg-white border-b border-slate-200 px-8 flex items-center justify-between">
-          <div>
-            <h1 className="text-lg font-black">Blockchain-Enabled Secure Supply-chain and Authenticity System</h1>
-            <p className="text-xs text-slate-400">Real-time traceability & cold-chain integrity</p>
-          </div>
+      {/* Main Content */}
+      <main className={`flex-1 transition-all duration-300 ${sidebarOpen ? 'ml-64' : 'ml-20'}`}>
+        {/* Top Bar */}
+        <div className="sticky top-0 bg-white border-b border-slate-200 shadow-sm z-30">
+          <div className="flex items-center justify-between h-20 px-8">
+            <h1 className="text-sm font-bold text-slate-900">
+              {user?.name ? `Welcome, ${user.name}!` : 'Dashboard'}
+            </h1>
 
-          <div className="flex items-center gap-4">
-            <div className="relative hidden md:block">
-              <Search size={16} className="absolute left-3 top-3 text-slate-400" />
-              <input
-                className="pl-9 pr-4 py-2 bg-slate-100 rounded-xl text-sm outline-none focus:ring-2 focus:ring-emerald-500"
-                placeholder="Search ledger…"
-              />
+            <div className="relative">
+              <button
+                onClick={() => setUserMenuOpen(!userMenuOpen)}
+                className="flex items-center gap-2 px-4 py-2 rounded-lg hover:bg-slate-100 transition"
+              >
+                <div className="w-8 h-8 rounded-full bg-emerald-500 flex items-center justify-center text-xs font-bold text-white">
+                  {user?.name?.charAt(0) || 'U'}
+                </div>
+                <ChevronDown size={16} className="text-slate-600" />
+              </button>
+
+              {userMenuOpen && (
+                <div className="absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-lg border border-slate-200 py-2 z-50">
+                  <button
+                    onClick={() => {
+                      setUserMenuOpen(false);
+                      navigate('/settings');
+                    }}
+                    className="w-full text-left px-4 py-2 text-sm text-slate-700 hover:bg-slate-50 transition"
+                  >
+                    Settings
+                  </button>
+                  <button
+                    onClick={() => {
+                      setUserMenuOpen(false);
+                      handleLogout();
+                    }}
+                    className="w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-red-50 transition"
+                  >
+                    Logout
+                  </button>
+                </div>
+              )}
             </div>
-
-            <button className="bg-emerald-500 hover:bg-emerald-600 text-white px-5 py-2 rounded-xl text-sm font-bold shadow">
-              Verify Product
-            </button>
           </div>
-        </header>
+        </div>
 
-        {children}
+        {/* Page Content */}
+        <div className="bg-slate-50">
+          {children}
+        </div>
       </main>
+
+      {/* Mobile Overlay */}
+      {sidebarOpen && (
+        <div
+          className="fixed inset-0 bg-black/50 z-30 lg:hidden"
+          onClick={() => setSidebarOpen(false)}
+        />
+      )}
     </div>
   );
 };
