@@ -135,11 +135,11 @@ Role: Manufacturer
 ### To Refactor
 - [ ] `client/src/pages/Layout.jsx` - Make role-agnostic
 - [ ] `client/src/App.jsx` - Update routes
-- [ ] `client/src/pages/Dashboard.jsx` - Move to manufacturer, add real API
-- [ ] `client/src/pages/Products.jsx` - Move to manufacturer, rename
-- [ ] `client/src/pages/Shipments.jsx` - Move to manufacturer
-- [ ] `client/src/pages/IoTAlerts.jsx` - Move to manufacturer
-- [ ] `client/src/pages/LedgerAudit.jsx` - Move to manufacturer
+- [x] `client/src/pages/Dashboard.jsx` - Move to manufacturer, add real API
+- [x] `client/src/pages/Products.jsx` - Move to manufacturer, rename
+- [x] `client/src/pages/Shipments.jsx` - Move to manufacturer
+- [x] `client/src/pages/IoTAlerts.jsx` - Move to manufacturer
+- [x] `client/src/pages/LedgerAudit.jsx` - Move to manufacturer
 - [ ] All controllers - Add real database queries
 - [ ] All routes - Register in server.js
 
