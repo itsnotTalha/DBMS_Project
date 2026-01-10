@@ -1,15 +1,26 @@
-import React from 'react'; // Don't forget to import React
-import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
+import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import Login from './pages/Login';
 import Register from './pages/Register';
-import Dashboard from './pages/Dashboard'; // This serves as the Manufacturer/Generic Dashboard
-import Products from './pages/Products';
-import Shipments from './pages/Shipments';
-import IoTAlerts from './pages/IoTAlerts';
-import LedgerAudit from './pages/LedgerAudit';
-import CustomerDashboard from './pages/customerDashboard';
-import RetailerDashboard from './pages/retailerDashboard';
-import AdminDashboard from './pages/adminDashboard';
+
+// Manufacturer Pages
+import ManufacturerDashboard from './pages/manufacturer/Dashboard';
+import ManufacturerProducts from './pages/manufacturer/Products';
+import ManufacturerAddProduct from './pages/manufacturer/AddProduct';
+import ManufacturerProduction from './pages/manufacturer/Production';
+import ManufacturerShipments from './pages/manufacturer/Shipments';
+import ManufacturerIoTAlerts from './pages/manufacturer/IoTAlerts';
+import ManufacturerLedgerAudit from './pages/manufacturer/LedgerAudit';
+import ManufacturerOrders from './pages/manufacturer/Orders';
+
+// Retailer Pages
+import RetailerDashboard from './pages/retailer/Dashboard';
+import RetailerOrders from './pages/retailer/Orders';
+
+// Customer Pages
+import CustomerDashboard from './pages/customer/Dashboard';
+
+// Admin Pages
+import AdminDashboard from './pages/admin/Dashboard';
 
 // --- NEW COMPONENT: DECIDES WHERE TO GO ---
 const RootRedirect = () => {
@@ -38,23 +49,32 @@ function App() {
   return (
     <Router>
       <Routes>
-        {/* 1. LANDING PAGE: Uses the new RootRedirect logic */}
-        <Route path="/" element={<RootRedirect />} />
-        
-        {/* 2. PUBLIC ROUTES */}
+        {/* Auth Routes */}
         <Route path="/login" element={<Login />} />
         <Route path="/register" element={<Register />} />
-        
-        {/* 3. PROTECTED ROUTES */}
-        <Route path="/dashboard" element={<Dashboard />} />
-        <Route path="/products" element={<Products />} />
-        <Route path="/shipments" element={<Shipments />} />
-        <Route path="/iot-alerts" element={<IoTAlerts />} />
-        <Route path="/ledger-audit" element={<LedgerAudit />} />
-        
-        <Route path="/customer-dashboard" element={<CustomerDashboard />} />
-        <Route path="/retailer-dashboard" element={<RetailerDashboard />} />
-        <Route path="/admin-dashboard" element={<AdminDashboard />} />
+
+        {/* Manufacturer Routes */}
+        <Route path="/manufacturer/dashboard" element={<ManufacturerDashboard />} />
+        <Route path="/manufacturer/products" element={<ManufacturerProducts />} />
+        <Route path="/manufacturer/add-product" element={<ManufacturerAddProduct />} />
+        <Route path="/manufacturer/production" element={<ManufacturerProduction />} />
+        <Route path="/manufacturer/shipments" element={<ManufacturerShipments />} />
+        <Route path="/manufacturer/iot-alerts" element={<ManufacturerIoTAlerts />} />
+        <Route path="/manufacturer/ledger-audit" element={<ManufacturerLedgerAudit />} />
+        <Route path="/manufacturer/orders" element={<ManufacturerOrders />} />
+
+        {/* Retailer Routes */}
+        <Route path="/retailer/dashboard" element={<RetailerDashboard />} />
+        <Route path="/retailer/orders" element={<RetailerOrders />} />
+
+        {/* Customer Routes */}
+        <Route path="/customer/dashboard" element={<CustomerDashboard />} />
+
+        {/* Admin Routes */}
+        <Route path="/admin/dashboard" element={<AdminDashboard />} />
+
+        {/* Default Route */}
+        <Route path="/" element={<Login />} />
       </Routes>
     </Router>
   );

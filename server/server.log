@@ -1,0 +1,84 @@
+nohup: ignoring input
+[dotenv@17.2.3] injecting env (6) from .env -- tip: 🛠️  run anywhere with `dotenvx run -- yourcommand`
+✅ Environment variables loaded
+  Host: localhost
+  User: root
+  DB: supply_chain_db
+Server running on port 5000
+MySQL Database Connected Successfully!
+Get dashboard metrics error: Error: Unknown column 'ra.batch_id' in 'on clause'
+    at PromisePool.query (/home/potato/Git/DBMS_Project/server/node_modules/mysql2/lib/promise/pool.js:36:22)
+    at getDashboardMetrics (file:///home/potato/Git/DBMS_Project/server/controllers/manufacturerController.js:512:36)
+    at process.processTicksAndRejections (node:internal/process/task_queues:103:5) {
+  code: 'ER_BAD_FIELD_ERROR',
+  errno: 1054,
+  sql: 'SELECT COUNT(*) as total \n' +
+    '       FROM Risk_Alerts ra\n' +
+    '       JOIN Batches b ON ra.batch_id = b.batch_id\n' +
+    '       WHERE b.manufacturer_id = 2 AND ra.severity IN ("High", "Medium")',
+  sqlState: '42S22',
+  sqlMessage: "Unknown column 'ra.batch_id' in 'on clause'"
+}
+Get dashboard metrics error: Error: Unknown column 'ra.batch_id' in 'on clause'
+    at PromisePool.query (/home/potato/Git/DBMS_Project/server/node_modules/mysql2/lib/promise/pool.js:36:22)
+    at getDashboardMetrics (file:///home/potato/Git/DBMS_Project/server/controllers/manufacturerController.js:512:36)
+    at process.processTicksAndRejections (node:internal/process/task_queues:103:5) {
+  code: 'ER_BAD_FIELD_ERROR',
+  errno: 1054,
+  sql: 'SELECT COUNT(*) as total \n' +
+    '       FROM Risk_Alerts ra\n' +
+    '       JOIN Batches b ON ra.batch_id = b.batch_id\n' +
+    '       WHERE b.manufacturer_id = 2 AND ra.severity IN ("High", "Medium")',
+  sqlState: '42S22',
+  sqlMessage: "Unknown column 'ra.batch_id' in 'on clause'"
+}
+Get production batches error: Error: Unknown column 'b.product_def_id' in 'on clause'
+    at PromisePool.query (/home/potato/Git/DBMS_Project/server/node_modules/mysql2/lib/promise/pool.js:36:22)
+    at getProductionBatches (file:///home/potato/Git/DBMS_Project/server/controllers/manufacturerController.js:268:32)
+    at Layer.handleRequest (/home/potato/Git/DBMS_Project/server/node_modules/router/lib/layer.js:152:17)
+    at next (/home/potato/Git/DBMS_Project/server/node_modules/router/lib/route.js:157:13)
+    at file:///home/potato/Git/DBMS_Project/server/routes/manufacturerRoutes.js:13:5
+    at verifyToken (file:///home/potato/Git/DBMS_Project/server/middleware/authMiddleware.js:13:5)
+    at verifyManufacturer (file:///home/potato/Git/DBMS_Project/server/routes/manufacturerRoutes.js:9:3)
+    at Layer.handleRequest (/home/potato/Git/DBMS_Project/server/node_modules/router/lib/layer.js:152:17)
+    at next (/home/potato/Git/DBMS_Project/server/node_modules/router/lib/route.js:157:13)
+    at Route.dispatch (/home/potato/Git/DBMS_Project/server/node_modules/router/lib/route.js:117:3) {
+  code: 'ER_BAD_FIELD_ERROR',
+  errno: 1054,
+  sql: 'SELECT b.batch_id, b.batch_code, b.manufacturing_date, b.expiry_date,\n' +
+    '              pd.name as productName, COUNT(pi.item_id) as quantity,\n' +
+    '              b.retailer_order_id\n' +
+    '       FROM Batches b\n' +
+    '       JOIN Product_Definitions pd ON b.product_def_id = pd.product_def_id\n' +
+    '       LEFT JOIN Product_Items pi ON b.batch_id = pi.batch_id\n' +
+    '       WHERE b.manufacturer_id = 2\n' +
+    '       GROUP BY b.batch_id\n' +
+    '       ORDER BY b.manufacturing_date DESC',
+  sqlState: '42S22',
+  sqlMessage: "Unknown column 'b.product_def_id' in 'on clause'"
+}
+Get production batches error: Error: Unknown column 'b.product_def_id' in 'on clause'
+    at PromisePool.query (/home/potato/Git/DBMS_Project/server/node_modules/mysql2/lib/promise/pool.js:36:22)
+    at getProductionBatches (file:///home/potato/Git/DBMS_Project/server/controllers/manufacturerController.js:268:32)
+    at Layer.handleRequest (/home/potato/Git/DBMS_Project/server/node_modules/router/lib/layer.js:152:17)
+    at next (/home/potato/Git/DBMS_Project/server/node_modules/router/lib/route.js:157:13)
+    at file:///home/potato/Git/DBMS_Project/server/routes/manufacturerRoutes.js:13:5
+    at verifyToken (file:///home/potato/Git/DBMS_Project/server/middleware/authMiddleware.js:13:5)
+    at verifyManufacturer (file:///home/potato/Git/DBMS_Project/server/routes/manufacturerRoutes.js:9:3)
+    at Layer.handleRequest (/home/potato/Git/DBMS_Project/server/node_modules/router/lib/layer.js:152:17)
+    at next (/home/potato/Git/DBMS_Project/server/node_modules/router/lib/route.js:157:13)
+    at Route.dispatch (/home/potato/Git/DBMS_Project/server/node_modules/router/lib/route.js:117:3) {
+  code: 'ER_BAD_FIELD_ERROR',
+  errno: 1054,
+  sql: 'SELECT b.batch_id, b.batch_code, b.manufacturing_date, b.expiry_date,\n' +
+    '              pd.name as productName, COUNT(pi.item_id) as quantity,\n' +
+    '              b.retailer_order_id\n' +
+    '       FROM Batches b\n' +
+    '       JOIN Product_Definitions pd ON b.product_def_id = pd.product_def_id\n' +
+    '       LEFT JOIN Product_Items pi ON b.batch_id = pi.batch_id\n' +
+    '       WHERE b.manufacturer_id = 2\n' +
+    '       GROUP BY b.batch_id\n' +
+    '       ORDER BY b.manufacturing_date DESC',
+  sqlState: '42S22',
+  sqlMessage: "Unknown column 'b.product_def_id' in 'on clause'"
+}
