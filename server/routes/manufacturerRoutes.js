@@ -18,6 +18,7 @@ const verifyManufacturer = (req, res, next) => {
 // PRODUCTS ROUTES
 // ============================================
 router.get('/products', verifyManufacturer, manufacturerController.getManufacturerProducts);
+router.post('/products', verifyManufacturer, manufacturerController.createProduct);
 router.get('/products/:productId', verifyManufacturer, manufacturerController.getProductDetails);
 router.put('/products/:productId/stock', verifyManufacturer, manufacturerController.updateProductStock);
 
@@ -32,6 +33,7 @@ router.post('/orders/:orderId/reject', verifyManufacturer, manufacturerControlle
 // PRODUCTION ROUTES
 // ============================================
 router.get('/production', verifyManufacturer, manufacturerController.getProductionBatches);
+router.post('/production', verifyManufacturer, manufacturerController.createProduction);
 router.post('/production/:productionRequestId/complete', verifyManufacturer, manufacturerController.completeProduction);
 
 // ============================================

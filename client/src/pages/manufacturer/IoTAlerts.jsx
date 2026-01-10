@@ -29,7 +29,10 @@ const ManufacturerIoTAlerts = () => {
 
     const fetchAlerts = async () => {
       try {
-        const response = await axios.get('http://localhost:5000/api/iot/alerts');
+        const token = localStorage.getItem('token') || sessionStorage.getItem('token');
+        const response = await axios.get('http://localhost:5000/api/manufacturer/iot-alerts', {
+          headers: { Authorization: `Bearer ${token}` }
+        });
         setAlerts(response.data);
       } catch (err) {
         console.error('Error fetching alerts:', err);

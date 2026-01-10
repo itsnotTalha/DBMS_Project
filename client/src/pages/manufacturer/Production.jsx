@@ -30,7 +30,10 @@ const Production = () => {
 
     const fetchProduction = async () => {
       try {
-        const response = await axios.get('http://localhost:5000/api/manufacturer/production');
+        const token = localStorage.getItem('token') || sessionStorage.getItem('token');
+        const response = await axios.get('http://localhost:5000/api/manufacturer/production', {
+          headers: { Authorization: `Bearer ${token}` }
+        });
         setProduction(Array.isArray(response.data) ? response.data : []);
       } catch (err) {
         console.error('Error fetching production data:', err);

@@ -29,7 +29,10 @@ const ManufacturerLedgerAudit = () => {
 
     const fetchLedger = async () => {
       try {
-        const response = await axios.get('http://localhost:5000/api/dashboard/ledger');
+        const token = localStorage.getItem('token') || sessionStorage.getItem('token');
+        const response = await axios.get('http://localhost:5000/api/manufacturer/ledger', {
+          headers: { Authorization: `Bearer ${token}` }
+        });
         setLedger(response.data);
       } catch (err) {
         console.error('Error fetching ledger:', err);

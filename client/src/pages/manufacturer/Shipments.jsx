@@ -29,7 +29,10 @@ const ManufacturerShipments = () => {
 
     const fetchShipments = async () => {
       try {
-        const response = await axios.get('http://localhost:5000/api/dashboard/shipments');
+        const token = localStorage.getItem('token') || sessionStorage.getItem('token');
+        const response = await axios.get('http://localhost:5000/api/manufacturer/shipments', {
+          headers: { Authorization: `Bearer ${token}` }
+        });
         const confirmedShipments = Array.isArray(response.data) 
           ? response.data.filter(shipment => 
               shipment.status.includes('Confirmed') || 
