@@ -64,7 +64,7 @@ export const createOrder = async (req, res) => {
 
     for (const item of items) {
       const [[product]] = await connection.query(
-        'SELECT product_def_id, base_price, current_stock FROM Product_Definitions WHERE product_def_id = ?',
+        'SELECT product_def_id, base_price FROM Product_Definitions WHERE product_def_id = ?',
         [item.productId]
       );
 
@@ -72,9 +72,8 @@ export const createOrder = async (req, res) => {
         throw new Error(`Product ${item.productId} not found`);
       }
 
-      if (product.current_stock < item.quantity) {
-        throw new Error(`Insufficient stock for product ${item.productId}`);
-      }
+      // Note: Stock availability is checked by the manufacturer when they accept/reject the order
+      // Retailer can place orders even if stock is low - manufacturer decides
 
       const itemTotal = product.base_price * item.quantity;
       totalAmount += itemTotal;

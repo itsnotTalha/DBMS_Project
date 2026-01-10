@@ -117,18 +117,33 @@ export const getB2BOrders = async (req, res) => {
 
     const [orders] = await db.query(
       `SELECT bo.b2b_order_id, bo.order_date, bo.status, bo.total_amount,
-              r.business_name as retailerName, r.retailer_id,
-              COUNT(oli.line_item_id) as itemCount
+              r.business_name, r.tax_id, r.retailer_id
        FROM B2B_Orders bo
        JOIN Retailers r ON bo.retailer_id = r.retailer_id
-       LEFT JOIN Order_Line_Items oli ON bo.b2b_order_id = oli.b2b_order_id
        WHERE bo.manufacturer_id = ?
-       GROUP BY bo.b2b_order_id
        ORDER BY bo.order_date DESC`,
       [manufacturerId]
     );
 
-    res.json(orders);
+    // Fetch line items for each order
+    const ordersWithItems = await Promise.all(
+      orders.map(async (order) => {
+        const [lineItems] = await db.query(
+          `SELECT oli.line_item_id, oli.product_def_id, oli.quantity_ordered, oli.unit_price,
+                  pd.name as product_name
+           FROM Order_Line_Items oli
+           JOIN Product_Definitions pd ON oli.product_def_id = pd.product_def_id
+           WHERE oli.b2b_order_id = ?`,
+          [order.b2b_order_id]
+        );
+        return {
+          ...order,
+          items: lineItems
+        };
+      })
+    );
+
+    res.json({ data: ordersWithItems });
   } catch (error) {
     console.error('Get B2B orders error:', error);
     res.status(500).json({ error: error.message });
@@ -156,29 +171,59 @@ export const acceptB2BOrder = async (req, res) => {
       throw new Error('Order not found');
     }
 
-    // Update order status
+    // Get order line items to check stock availability
+    const [lineItems] = await connection.query(
+      `SELECT oli.product_def_id, oli.quantity_ordered 
+       FROM Order_Line_Items oli 
+       WHERE oli.b2b_order_id = ?`,
+      [orderId]
+    );
+
+    // Check if manufacturer has sufficient stock for all items
+    const insufficientItems = [];
+    for (const lineItem of lineItems) {
+      const [[product]] = await connection.query(
+        'SELECT current_stock FROM Product_Definitions WHERE product_def_id = ? AND manufacturer_id = ?',
+        [lineItem.product_def_id, manufacturerId]
+      );
+
+      if (!product || product.current_stock < lineItem.quantity_ordered) {
+        insufficientItems.push({
+          productId: lineItem.product_def_id,
+          requestedQty: lineItem.quantity_ordered,
+          availableQty: product ? product.current_stock : 0
+        });
+      }
+    }
+
+    // If insufficient stock, return error
+    if (insufficientItems.length > 0) {
+      await connection.rollback();
+      return res.status(400).json({
+        error: 'Insufficient stock for one or more items',
+        insufficientItems: insufficientItems
+      });
+    }
+
+    // Deduct stock for all items
+    for (const lineItem of lineItems) {
+      await connection.query(
+        `UPDATE Product_Definitions 
+         SET current_stock = current_stock - ? 
+         WHERE product_def_id = ? AND manufacturer_id = ?`,
+        [lineItem.quantity_ordered, lineItem.product_def_id, manufacturerId]
+      );
+    }
+
+    // Update order status to Approved
     await connection.query(
       'UPDATE B2B_Orders SET status = "Approved" WHERE b2b_order_id = ?',
       [orderId]
     );
 
-    // Create shipment entry (assuming ready to ship)
-    const [[shipmentResult]] = await connection.query(
-      `INSERT INTO Deliveries (order_id, status) 
-       VALUES (?, 'Dispatched')`,
-      [orderId]
-    );
-
-    // Log transaction
-    await connection.query(
-      `INSERT INTO Product_Transactions (action, from_user_id, created_at)
-       VALUES (?, ?, NOW())`,
-      ['Order Accepted', manufacturerId]
-    );
-
     await connection.commit();
 
-    res.json({ message: 'Order accepted successfully', shipmentId: shipmentResult.insertId });
+    res.json({ message: 'Order accepted successfully', orderId: orderId });
   } catch (error) {
     await connection.rollback();
     console.error('Accept B2B order error:', error);
