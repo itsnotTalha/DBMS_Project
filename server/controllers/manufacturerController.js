@@ -237,25 +237,55 @@ export const acceptB2BOrder = async (req, res) => {
 // REJECT B2B ORDER
 // ============================================
 export const rejectB2BOrder = async (req, res) => {
+  const connection = await db.getConnection();
   try {
+    await connection.beginTransaction();
+
     const { orderId } = req.params;
     const manufacturerId = req.user.id;
 
-    const [result] = await db.query(
+    // Verify order exists and belongs to this manufacturer
+    const [[order]] = await connection.query(
+      'SELECT * FROM B2B_Orders WHERE b2b_order_id = ? AND manufacturer_id = ?',
+      [orderId, manufacturerId]
+    );
+
+    if (!order) {
+      await connection.rollback();
+      return res.status(404).json({ error: 'Order not found' });
+    }
+
+    // Release reserved stock
+    const [lineItems] = await connection.query(
+      'SELECT product_def_id, quantity_ordered FROM Order_Line_Items WHERE b2b_order_id = ?',
+      [orderId]
+    );
+
+    for (const item of lineItems) {
+      await connection.query(
+        `UPDATE Product_Definitions 
+         SET reserved_stock = reserved_stock - ?
+         WHERE product_def_id = ?`,
+        [item.quantity_ordered, item.product_def_id]
+      );
+    }
+
+    // Update order status to Rejected
+    await connection.query(
       `UPDATE B2B_Orders 
        SET status = 'Rejected' 
        WHERE b2b_order_id = ? AND manufacturer_id = ?`,
       [orderId, manufacturerId]
     );
 
-    if (result.affectedRows === 0) {
-      return res.status(404).json({ error: 'Order not found' });
-    }
-
+    await connection.commit();
     res.json({ message: 'Order rejected successfully' });
   } catch (error) {
+    await connection.rollback();
     console.error('Reject B2B order error:', error);
     res.status(500).json({ error: error.message });
+  } finally {
+    connection.release();
   }
 };
 

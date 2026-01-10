@@ -72,7 +72,7 @@ const Orders = () => {
           console.warn('[Orders] ⚠️ Empty manufacturers array received');
         }
         
-        setOrders(Array.isArray(ordersData) ? ordersData : []);
+        setOrders(Array.isArray(ordersData?.data) ? ordersData.data : Array.isArray(ordersData) ? ordersData : []);
         setManufacturers(Array.isArray(manufacturersData) ? manufacturersData : []);
       } catch (error) {
         console.error('[Orders] Failed to fetch data:', error);
@@ -184,7 +184,7 @@ const Orders = () => {
           headers: { 'Authorization': `Bearer ${token}` }
         });
         const ordersData = await ordersResponse.json();
-        setOrders(ordersData);
+        setOrders(Array.isArray(ordersData?.data) ? ordersData.data : Array.isArray(ordersData) ? ordersData : []);
         alert('Order placed successfully!');
       } else {
         const errorData = await response.json();

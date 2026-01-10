@@ -135,19 +135,34 @@ export const getRetailerOrders = async (req, res) => {
     const retailerId = req.user.id;
 
     const [orders] = await db.query(
-      `SELECT bo.b2b_order_id as orderId, bo.order_date, bo.status, bo.total_amount,
-              m.company_name as manufacturerName,
-              COUNT(oli.line_item_id) as itemCount
+      `SELECT bo.b2b_order_id, bo.order_date, bo.status, bo.total_amount,
+              m.company_name, m.manufacturer_id
        FROM B2B_Orders bo
        JOIN Manufacturers m ON bo.manufacturer_id = m.manufacturer_id
-       LEFT JOIN Order_Line_Items oli ON bo.b2b_order_id = oli.b2b_order_id
        WHERE bo.retailer_id = ?
-       GROUP BY bo.b2b_order_id
        ORDER BY bo.order_date DESC`,
       [retailerId]
     );
 
-    res.json(orders);
+    // Fetch line items for each order
+    const ordersWithItems = await Promise.all(
+      orders.map(async (order) => {
+        const [lineItems] = await db.query(
+          `SELECT oli.line_item_id, oli.product_def_id, oli.quantity_ordered, oli.unit_price,
+                  pd.name as product_name
+           FROM Order_Line_Items oli
+           JOIN Product_Definitions pd ON oli.product_def_id = pd.product_def_id
+           WHERE oli.b2b_order_id = ?`,
+          [order.b2b_order_id]
+        );
+        return {
+          ...order,
+          items: lineItems
+        };
+      })
+    );
+
+    res.json({ data: ordersWithItems });
   } catch (error) {
     console.error('Get retailer orders error:', error);
     res.status(500).json({ error: error.message });
