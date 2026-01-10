@@ -1,4 +1,5 @@
 import db from '../config/db.js';
+import crypto from 'crypto';
 
 // ============================================
 // GET MANUFACTURER PRODUCTS
@@ -298,13 +299,13 @@ export const getProductionBatches = async (req, res) => {
 
     const [batches] = await db.query(
       `SELECT b.batch_id, b.batch_code, b.manufacturing_date, b.expiry_date,
-              pd.name as productName, COUNT(pi.item_id) as quantity,
+              pd.product_def_id, pd.name as productName, COUNT(pi.item_id) as quantity,
               b.retailer_order_id
        FROM Batches b
-       JOIN Product_Definitions pd ON b.product_def_id = pd.product_def_id
        LEFT JOIN Product_Items pi ON b.batch_id = pi.batch_id
+       LEFT JOIN Product_Definitions pd ON pi.product_def_id = pd.product_def_id
        WHERE b.manufacturer_id = ?
-       GROUP BY b.batch_id
+       GROUP BY b.batch_id, pd.product_def_id
        ORDER BY b.manufacturing_date DESC`,
       [manufacturerId]
     );
@@ -317,55 +318,76 @@ export const getProductionBatches = async (req, res) => {
 };
 
 // ============================================
+// ============================================
 // CREATE PRODUCTION BATCH
 // ============================================
 export const createProduction = async (req, res) => {
+  const connection = await db.getConnection();
   try {
+    await connection.beginTransaction();
+
     const manufacturerId = req.user.id;
     const { product_def_id, quantity, manufacturing_date, expiry_date, batch_code } = req.body;
 
     if (!product_def_id || !quantity || !manufacturing_date || !expiry_date) {
+      await connection.rollback();
       return res.status(400).json({ error: 'product_def_id, quantity, manufacturing_date, and expiry_date are required' });
     }
 
     // Verify product belongs to manufacturer
-    const [[product]] = await db.query(
+    const [[product]] = await connection.query(
       'SELECT * FROM Product_Definitions WHERE product_def_id = ? AND manufacturer_id = ?',
       [product_def_id, manufacturerId]
     );
 
     if (!product) {
+      await connection.rollback();
       return res.status(404).json({ error: 'Product not found' });
     }
 
-    const [result] = await db.query(
+    // Create batch
+    const [result] = await connection.query(
       `INSERT INTO Batches 
-       (manufacturer_id, product_def_id, batch_code, manufacturing_date, expiry_date)
-       VALUES (?, ?, ?, ?, ?)`,
-      [manufacturerId, product_def_id, batch_code || `BATCH-${Date.now()}`, manufacturing_date, expiry_date]
+       (manufacturer_id, batch_code, manufacturing_date, expiry_date)
+       VALUES (?, ?, ?, ?)`,
+      [manufacturerId, batch_code || `BATCH-${Date.now()}`, manufacturing_date, expiry_date]
     );
 
-    // Create product items for the batch
     const batchId = result.insertId;
+
+    // Create product items for the batch
     for (let i = 0; i < quantity; i++) {
       const serialCode = `SERIAL-${batchId}-${i + 1}`;
-      const hash = require('crypto').createHash('sha256').update(serialCode).digest('hex');
+      const hash = crypto.createHash('sha256').update(serialCode).digest('hex');
       
-      await db.query(
+      await connection.query(
         `INSERT INTO Product_Items (batch_id, product_def_id, serial_code, authentication_hash, status)
          VALUES (?, ?, ?, ?, 'Manufacturing')`,
         [batchId, product_def_id, serialCode, hash]
       );
     }
 
+    // Update product current_stock
+    await connection.query(
+      `UPDATE Product_Definitions 
+       SET current_stock = current_stock + ?
+       WHERE product_def_id = ?`,
+      [quantity, product_def_id]
+    );
+
+    await connection.commit();
+
     res.status(201).json({
       message: 'Production batch created successfully',
-      batchId: result.insertId,
+      batchId: batchId,
       batchCode: batch_code || `BATCH-${Date.now()}`
     });
   } catch (error) {
+    await connection.rollback();
     console.error('Create production error:', error);
     res.status(500).json({ error: error.message });
+  } finally {
+    connection.release();
   }
 };
 
