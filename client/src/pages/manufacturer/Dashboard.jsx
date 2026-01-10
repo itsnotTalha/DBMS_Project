@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import {
   LayoutDashboard, Box, Truck, Activity, ShieldCheck,
-  Search, Bell, Thermometer, LogOut
+  Bell, Thermometer
 } from 'lucide-react';
 import Layout from '../Layout';
 
@@ -11,6 +11,7 @@ const Dashboard = () => {
   const navigate = useNavigate();
   const [user, setUser] = useState(null);
 
+  // Default stats
   const [stats, setStats] = useState({ batches: 0, units: 0, transit: 0, alerts: 0 });
   const [shipments, setShipments] = useState([]);
   const [ledger, setLedger] = useState([]);
@@ -25,25 +26,35 @@ const Dashboard = () => {
   ];
 
   useEffect(() => {
-    const storedUser =
-      localStorage.getItem('user') || sessionStorage.getItem('user');
-
+    const storedUser = localStorage.getItem('user') || sessionStorage.getItem('user');
     if (!storedUser) {
       navigate('/login');
       return;
     }
-
     const parsedUser = JSON.parse(storedUser);
-
     if (parsedUser.role !== 'Manufacturer') {
-      alert('Access Denied: This dashboard is for Manufacturers only.');
+      alert('Access Denied');
       navigate('/login');
       return;
     }
-
     setUser(parsedUser);
 
     const fetchDashboardData = async () => {
+      const token = localStorage.getItem('token') || sessionStorage.getItem('token');
+      const authConfig = { headers: { Authorization: `Bearer ${token}` } };
+
+      // STEP 1: Fetch Active Batches (Critical - Isolated)
+      // We do this separately so it works even if other APIs fail
+      try {
+        const prodRes = await axios.get('http://localhost:5000/api/manufacturer/production', authConfig);
+        const realBatchCount = Array.isArray(prodRes.data) ? prodRes.data.length : 0;
+        
+        setStats(prev => ({ ...prev, batches: realBatchCount }));
+      } catch (err) {
+        console.error('❌ Error fetching batch count:', err);
+      }
+
+      // STEP 2: Fetch Other Dashboard Widgets
       try {
         const [statsRes, shipRes, ledgerRes] = await Promise.all([
           axios.get('http://localhost:5000/api/dashboard/stats'),
@@ -51,11 +62,17 @@ const Dashboard = () => {
           axios.get('http://localhost:5000/api/dashboard/ledger')
         ]);
 
-        setStats(statsRes.data);
+        setStats(prev => ({
+          ...prev,            // Keep the batch count we just set
+          ...statsRes.data,   // Merge in other stats (units, transit, alerts)
+          batches: prev.batches // FORCE keep the real batch count from Step 1
+        }));
+
         setShipments(shipRes.data);
         setLedger(ledgerRes.data);
       } catch (err) {
-        console.error('Dashboard fetch error:', err);
+        // If shipments fail (Error 500), we just log it, but the dashboard still loads!
+        console.error('⚠️ Warning: Some dashboard widgets failed to load:', err);
       } finally {
         setLoading(false);
       }
@@ -69,7 +86,7 @@ const Dashboard = () => {
       <div className="h-screen flex items-center justify-center bg-slate-50">
         <div className="flex flex-col items-center gap-4">
           <div className="w-10 h-10 border-4 border-emerald-500 border-t-transparent rounded-full animate-spin" />
-          <p className="text-sm font-semibold text-slate-500">Syncing BESS-PAS Ledger…</p>
+          <p className="text-sm font-semibold text-slate-500">Loading Dashboard...</p>
         </div>
       </div>
     );
@@ -79,6 +96,7 @@ const Dashboard = () => {
     <Layout user={user} menuItems={manufacturerMenuItems}>
       <div className="p-8 space-y-8">
         <div className="grid grid-cols-4 gap-3 md:gap-6">
+          {/* Active Batches now comes from the database even if other APIs fail */}
           <StatCard title="Active Batches" value={stats.batches} icon={<Box />} />
           <StatCard title="Units Verified" value={stats.units} icon={<ShieldCheck />} />
           <StatCard title="In Transit" value={stats.transit} icon={<Truck />} />
@@ -107,7 +125,8 @@ const Dashboard = () => {
                 )) : (
                   <tr>
                     <td colSpan="5" className="text-center py-10 text-slate-400">
-                      No active shipments
+                      {/* Friendly message if API fails */}
+                      No active shipments (or failed to load)
                     </td>
                   </tr>
                 )}
@@ -131,7 +150,7 @@ const Dashboard = () => {
                 {ledger.length ? ledger.map((l, i) => (
                   <LedgerItem key={i} {...l} />
                 )) : (
-                  <p className="text-xs text-slate-400 italic">Awaiting transactions…</p>
+                  <p className="text-xs text-slate-400 italic">Awaiting transactions...</p>
                 )}
               </div>
             </div>
@@ -142,16 +161,7 @@ const Dashboard = () => {
   );
 };
 
-const SidebarItem = ({ icon, label, active, onClick }) => (
-  <div 
-    onClick={onClick}
-    className={`flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-semibold cursor-pointer transition
-    ${active ? 'bg-emerald-500 text-white shadow' : 'text-slate-400 hover:bg-slate-800 hover:text-white'}`}
-  >
-    {icon} {label}
-  </div>
-);
-
+// --- Sub-components ---
 const StatCard = ({ title, value, icon, alert }) => (
   <div className="bg-white border rounded-2xl p-4 md:p-6 flex flex-col justify-between items-start shadow-sm">
     <div className="w-full">
