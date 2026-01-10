@@ -10,10 +10,9 @@ const AddProduct = () => {
   const [user, setUser] = useState(null);
   const [formData, setFormData] = useState({
     name: '',
-    sku: '',
-    batchNo: '',
-    quantity: '',
-    temperature: '',
+    category: '',
+    base_price: '',
+    current_stock: '',
     description: '',
   });
   const [loading, setLoading] = useState(false);
@@ -26,7 +25,7 @@ const AddProduct = () => {
     }
 
     const parsedUser = JSON.parse(storedUser);
-    if (parsedUser.role !== 'Manufacturer') {
+    if (parsedUser.role?.toLowerCase() !== 'manufacturer') {
       alert('Access Denied');
       navigate('/login');
       return;
@@ -48,12 +47,22 @@ const AddProduct = () => {
     setLoading(true);
 
     try {
-      await axios.post('http://localhost:5000/api/products', formData);
+      const token = localStorage.getItem('token') || sessionStorage.getItem('token');
+      await axios.post('http://localhost:5000/api/manufacturer/products', 
+        {
+          name: formData.name,
+          category: formData.category,
+          base_price: parseFloat(formData.base_price),
+          current_stock: parseInt(formData.current_stock),
+          description: formData.description
+        },
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
       alert('Product added successfully!');
       navigate('/manufacturer/products');
     } catch (err) {
       console.error('Error adding product:', err);
-      alert('Failed to add product');
+      alert('Failed to add product: ' + (err.response?.data?.error || err.message));
     } finally {
       setLoading(false);
     }
@@ -97,61 +106,47 @@ const AddProduct = () => {
 
               <div>
                 <label className="block text-sm font-semibold text-slate-700 mb-2">
-                  SKU
+                  Category
                 </label>
                 <input
                   type="text"
-                  name="sku"
-                  value={formData.sku}
+                  name="category"
+                  value={formData.category}
                   onChange={handleInputChange}
                   className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-emerald-500 outline-none"
-                  placeholder="Enter SKU"
+                  placeholder="e.g., Pharmaceutical, Food, etc."
                   required
                 />
               </div>
 
               <div>
                 <label className="block text-sm font-semibold text-slate-700 mb-2">
-                  Batch Number
-                </label>
-                <input
-                  type="text"
-                  name="batchNo"
-                  value={formData.batchNo}
-                  onChange={handleInputChange}
-                  className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-emerald-500 outline-none"
-                  placeholder="Enter batch number"
-                  required
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-semibold text-slate-700 mb-2">
-                  Quantity
+                  Base Price ($)
                 </label>
                 <input
                   type="number"
-                  name="quantity"
-                  value={formData.quantity}
+                  name="base_price"
+                  value={formData.base_price}
                   onChange={handleInputChange}
                   className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-emerald-500 outline-none"
-                  placeholder="Enter quantity"
+                  placeholder="Enter price"
+                  step="0.01"
                   required
                 />
               </div>
 
               <div>
                 <label className="block text-sm font-semibold text-slate-700 mb-2">
-                  Temperature (°C)
+                  Initial Stock Quantity
                 </label>
                 <input
                   type="number"
-                  name="temperature"
-                  value={formData.temperature}
+                  name="current_stock"
+                  value={formData.current_stock}
                   onChange={handleInputChange}
                   className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-emerald-500 outline-none"
-                  placeholder="Enter temperature"
-                  step="0.1"
+                  placeholder="Enter initial quantity"
+                  required
                 />
               </div>
             </div>

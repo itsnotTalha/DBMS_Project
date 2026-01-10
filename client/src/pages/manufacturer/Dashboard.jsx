@@ -55,59 +55,57 @@ const ManufacturerDashboard = () => {
 
   const loadDashboardData = async (token) => {
     try {
-      // Simulate API calls - replace with real endpoints when DB is connected
-      // const response = await axios.get('http://localhost:5000/api/manufacturer/dashboard', {
-      //   headers: { Authorization: `Bearer ${token}` }
-      // });
-
-      // Mock data for now
-      setStats({
-        totalProducts: 48,
-        activeOrders: 23,
-        pendingShipments: 7,
-        iotAlerts: 2,
-        monthlyRevenue: 125000,
-        totalShipped: 156,
+      // Fetch real data from backend API
+      const response = await axios.get('http://localhost:5000/api/manufacturer/dashboard', {
+        headers: { Authorization: `Bearer ${token}` }
       });
 
-      setRecentShipments([
-        {
-          id: 'SHP-001',
-          product: 'Pharmaceutical Batch A1',
-          quantity: 500,
-          destination: 'Delhi Distribution Center',
-          status: 'in-transit',
-          temperature: '2-8°C',
-          lastUpdate: '2 hours ago'
-        },
-        {
-          id: 'SHP-002',
-          product: 'Vaccine Batch B2',
-          quantity: 1000,
-          destination: 'Mumbai Hub',
-          status: 'confirmed',
-          temperature: '2-8°C',
-          lastUpdate: '5 hours ago'
-        },
-        {
-          id: 'SHP-003',
-          product: 'Electronic Components',
-          quantity: 250,
-          destination: 'Bangalore Retail',
-          status: 'in-transit',
-          temperature: '15-25°C',
-          lastUpdate: '8 hours ago'
-        },
-      ]);
+      const { metrics, recentShipments: shipments, topProducts: products } = response.data;
 
-      setTopProducts([
-        { id: 1, name: 'Pharmaceutical Batch A', quantity: 5000, revenue: 450000 },
-        { id: 2, name: 'Vaccine Batch B', quantity: 3000, revenue: 380000 },
-        { id: 3, name: 'Electronic Chips', quantity: 2500, revenue: 125000 },
-        { id: 4, name: 'Chemical Compounds', quantity: 1800, revenue: 90000 },
-      ]);
+      setStats({
+        totalProducts: metrics.total_products || 0,
+        activeOrders: metrics.pending_orders || 0,
+        pendingShipments: metrics.active_shipments || 0,
+        iotAlerts: metrics.iot_alerts || 0,
+        monthlyRevenue: metrics.monthly_revenue || 0,
+        totalShipped: metrics.total_shipped || 0,
+      });
+
+      // Format shipments from API response
+      setRecentShipments(
+        shipments.map(shipment => ({
+          id: shipment.shipment_id,
+          product: shipment.product_name,
+          quantity: shipment.quantity,
+          destination: shipment.destination_retailer,
+          status: shipment.status?.toLowerCase() === 'dispatched' ? 'in-transit' : shipment.status?.toLowerCase(),
+          temperature: shipment.temperature_range || 'N/A',
+          lastUpdate: new Date(shipment.updated_at).toLocaleDateString()
+        })) || []
+      );
+
+      // Format products from API response
+      setTopProducts(
+        products.map(product => ({
+          id: product.product_id,
+          name: product.product_name,
+          quantity: product.current_stock,
+          revenue: product.total_sales_value || 0
+        })) || []
+      );
     } catch (err) {
       console.error('Failed to load dashboard data:', err);
+      // Keep UI responsive with empty data instead of showing error
+      setStats({
+        totalProducts: 0,
+        activeOrders: 0,
+        pendingShipments: 0,
+        iotAlerts: 0,
+        monthlyRevenue: 0,
+        totalShipped: 0,
+      });
+      setRecentShipments([]);
+      setTopProducts([]);
     }
   };
 
@@ -191,7 +189,7 @@ const ManufacturerDashboard = () => {
             <div className="flex items-start justify-between">
               <div>
                 <p className="text-sm text-slate-600 font-semibold">Monthly Revenue</p>
-                <p className="text-3xl font-black text-slate-900 mt-2">₹{(stats.monthlyRevenue / 100000).toFixed(1)}L</p>
+                <p className="text-3xl font-black text-slate-900 mt-2">${(stats.monthlyRevenue).toLocaleString('en-US', { maximumFractionDigits: 0 })}</p>
                 <p className="text-xs text-green-600 mt-2 font-semibold">+12% from last month</p>
               </div>
               <div className="bg-green-100 p-3 rounded-lg">

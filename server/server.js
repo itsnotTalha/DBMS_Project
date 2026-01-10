@@ -1,11 +1,13 @@
+// Load environment variables FIRST
+import './loadEnv.js';
+
 import express from 'express';
 import cors from 'cors';
-import dotenv from 'dotenv';
 import db from './config/db.js';
 import authRoutes from './routes/authRoutes.js';
-import dashboardRoutes from './routes/dashboardRoutes.js'; // 1. Import new routes
-
-dotenv.config();
+import dashboardRoutes from './routes/dashboardRoutes.js';
+import manufacturerRoutes from './routes/manufacturerRoutes.js';
+import retailerRoutes from './routes/retailerRoutes.js';
 
 const app = express();
 
@@ -14,7 +16,9 @@ app.use(express.json());
 
 // Routes
 app.use('/api/auth', authRoutes);
-app.use('/api/dashboard', dashboardRoutes); // 2. Use new routes
+app.use('/api/dashboard', dashboardRoutes);
+app.use('/api/manufacturer', manufacturerRoutes);
+app.use('/api/retailer', retailerRoutes);
 
 app.get('/', async (req, res) => {
   res.json({ message: "API is running..." });

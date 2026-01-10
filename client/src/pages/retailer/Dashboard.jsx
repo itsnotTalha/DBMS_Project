@@ -58,7 +58,7 @@ const RetailerDashboard = () => {
           <div className="bg-white rounded-xl p-6 shadow-sm border border-slate-200">
             <div className="flex items-center justify-between mb-4">
               <TrendingUp className="text-green-500" size={24} />
-              <span className="text-xl font-bold text-slate-900">0</span>
+              <span className="text-xl font-bold text-slate-900">$0</span>
             </div>
             <p className="text-slate-600 text-sm">Monthly Revenue</p>
           </div>

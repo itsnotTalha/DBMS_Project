@@ -1,12 +1,13 @@
 import React from 'react';
 import {
   LayoutDashboard,
-  Box,
-  Store,
+  ShoppingCart,
   Truck,
+  BarChart3,
   AlertTriangle,
-  FileText,
-  MessageSquare,
+  Archive,
+  Zap,
+  Settings,
 } from 'lucide-react';
 
 export const retailerMenuItems = [
@@ -16,38 +17,38 @@ export const retailerMenuItems = [
     path: '/retailer/dashboard',
   },
   {
-    icon: React.createElement(Box, { size: 18 }),
+    icon: React.createElement(ShoppingCart, { size: 18 }),
+    label: 'Orders',
+    path: '/retailer/orders',
+  },
+  {
+    icon: React.createElement(Truck, { size: 18 }),
+    label: 'Shipments',
+    path: '/retailer/shipments',
+  },
+  {
+    icon: React.createElement(Archive, { size: 18 }),
     label: 'Inventory',
     path: '/retailer/inventory',
   },
   {
-    icon: React.createElement(Store, { size: 18 }),
-    label: 'Verify Products',
-    path: '/retailer/verify-products',
-  },
-  {
-    icon: React.createElement(Truck, { size: 18 }),
-    label: 'Incoming Shipments',
-    path: '/retailer/shipments',
+    icon: React.createElement(BarChart3, { size: 18 }),
+    label: 'Analytics',
+    path: '/retailer/analytics',
   },
   {
     icon: React.createElement(AlertTriangle, { size: 18 }),
-    label: 'Cold Chain Alerts',
+    label: 'Alerts & Recalls',
     path: '/retailer/alerts',
   },
   {
-    icon: React.createElement(AlertTriangle, { size: 18 }),
-    label: 'Recalls & Notices',
-    path: '/retailer/recalls',
+    icon: React.createElement(Zap, { size: 18 }),
+    label: 'IoT Alerts',
+    path: '/retailer/iot-alerts',
   },
   {
-    icon: React.createElement(FileText, { size: 18 }),
-    label: 'Compliance Reports',
-    path: '/retailer/reports',
-  },
-  {
-    icon: React.createElement(MessageSquare, { size: 18 }),
-    label: 'Support',
-    path: '/retailer/support',
+    icon: React.createElement(Settings, { size: 18 }),
+    label: 'Settings',
+    path: '/retailer/settings',
   },
 ];
