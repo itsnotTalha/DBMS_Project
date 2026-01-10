@@ -2,65 +2,83 @@ import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import Layout from '../Layout';
-import { Box, Plus, Search, Filter, AlertCircle, Edit2 } from 'lucide-react';
-import { manufacturerMenuItems } from './menu';
+import { Box, Plus, Search, Filter, Save, X } from 'lucide-react';
 
-const ManufacturerProducts = () => {
+const Products = () => {
   const navigate = useNavigate();
   const [user, setUser] = useState(null);
   const [products, setProducts] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [searchTerm, setSearchTerm] = useState('');
+  const [showAddForm, setShowAddForm] = useState(false);
+  const [formData, setFormData] = useState({
+    name: '',
+    description: '',
+    category: '',
+    base_price: '',
+    image_url: ''
+  });
 
   useEffect(() => {
-    verifyAuthAndLoadProducts();
+    const storedUser = localStorage.getItem('user') || sessionStorage.getItem('user');
+    if (!storedUser) {
+      navigate('/login');
+      return;
+    }
+
+    const parsedUser = JSON.parse(storedUser);
+    if (parsedUser.role !== 'Manufacturer') {
+      alert('Access Denied');
+      navigate('/login');
+      return;
+    }
+
+    setUser(parsedUser);
+
+    const fetchProducts = async () => {
+      try {
+        const token = localStorage.getItem('token') || sessionStorage.getItem('token');
+        const response = await axios.get('http://localhost:5000/api/manufacturer/products', {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+        setProducts(response.data);
+      } catch (err) {
+        console.error('Error fetching products:', err);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchProducts();
   }, [navigate]);
 
-  const verifyAuthAndLoadProducts = async () => {
+  const handleInputChange = (e) => {
+    const { name, value } = e.target;
+    setFormData(prev => ({
+      ...prev,
+      [name]: value
+    }));
+  };
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
     try {
-      const storedUser = JSON.parse(localStorage.getItem('user')) || JSON.parse(sessionStorage.getItem('user'));
       const token = localStorage.getItem('token') || sessionStorage.getItem('token');
-
-      if (!storedUser || storedUser.role?.toLowerCase() !== 'manufacturer') {
-        navigate('/login');
-        return;
-      }
-
-      setUser(storedUser);
+      await axios.post('http://localhost:5000/api/manufacturer/products', formData, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
       
-      // Fetch real products from API
+      // Refresh products list
       const response = await axios.get('http://localhost:5000/api/manufacturer/products', {
         headers: { Authorization: `Bearer ${token}` }
       });
-
-      setProducts(response.data || []);
+      setProducts(response.data);
+      
+      setShowAddForm(false);
+      setFormData({ name: '', description: '', category: '', base_price: '', image_url: '' });
+      alert('Product added successfully!');
     } catch (err) {
-      console.error('Error loading products:', err);
-      setProducts([]);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const filteredProducts = products.filter(product =>
-    product.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    product.category?.toLowerCase().includes(searchTerm.toLowerCase())
-  );
-
-  const handleUpdateStock = async (productId) => {
-    const newStock = prompt('Enter new stock quantity:');
-    if (newStock !== null && !isNaN(newStock)) {
-      try {
-        const token = localStorage.getItem('token') || sessionStorage.getItem('token');
-        await axios.put(`http://localhost:5000/api/manufacturer/products/${productId}/stock`, 
-          { newStock: parseInt(newStock) },
-          { headers: { Authorization: `Bearer ${token}` } }
-        );
-        // Refresh products
-        verifyAuthAndLoadProducts();
-      } catch (err) {
-        alert('Error updating stock: ' + err.message);
-      }
+      console.error('Error adding product:', err);
+      alert('Failed to add product: ' + (err.response?.data?.error || err.message));
     }
   };
 
@@ -73,22 +91,88 @@ const ManufacturerProducts = () => {
   }
 
   return (
-    <Layout user={user} menuItems={manufacturerMenuItems}>
+    <Layout user={user}>
       <div className="p-8">
         <div className="flex justify-between items-center mb-8">
           <div>
             <h2 className="text-2xl font-black flex items-center gap-3">
               <Box className="text-emerald-500" /> Products
             </h2>
-            <p className="text-sm text-slate-400">Manage your product catalog and inventory</p>
+            <p className="text-sm text-slate-400">Manage your product catalog</p>
           </div>
           <button 
-            onClick={() => navigate('/manufacturer/add-product')}
+            onClick={() => setShowAddForm(!showAddForm)}
             className="flex items-center gap-2 bg-emerald-500 hover:bg-emerald-600 text-white px-5 py-2.5 rounded-xl font-bold shadow"
           >
-            <Plus size={18} /> Add Product
+            {showAddForm ? <X size={18} /> : <Plus size={18} />} 
+            {showAddForm ? 'Close' : 'Add Product'}
           </button>
         </div>
+
+        {showAddForm && (
+          <div className="bg-white rounded-2xl shadow-sm border p-6 mb-8 animate-fade-in">
+            <h3 className="font-bold text-lg mb-4">Add New Product Definition</h3>
+            <form onSubmit={handleSubmit} className="space-y-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <input
+                  type="text"
+                  name="name"
+                  value={formData.name}
+                  onChange={handleInputChange}
+                  placeholder="Product Name"
+                  className="px-4 py-2 border rounded-lg focus:ring-2 focus:ring-emerald-500 outline-none"
+                  required
+                />
+                <select
+                  name="category"
+                  value={formData.category}
+                  onChange={handleInputChange}
+                  className="px-4 py-2 border rounded-lg focus:ring-2 focus:ring-emerald-500 outline-none bg-white"
+                  required
+                >
+                  <option value="">Select Category</option>
+                  <option value="Electronics">Electronics</option>
+                  <option value="Food & Beverage">Food & Beverage</option>
+                  <option value="Pharmaceuticals">Pharmaceuticals</option>
+                  <option value="Apparel">Apparel</option>
+                  <option value="Other">Other</option>
+                </select>
+                <input
+                  type="number"
+                  name="base_price"
+                  value={formData.base_price}
+                  onChange={handleInputChange}
+                  placeholder="Base Price ($)"
+                  step="0.01"
+                  className="px-4 py-2 border rounded-lg focus:ring-2 focus:ring-emerald-500 outline-none"
+                  required
+                />
+                <input
+                  type="url"
+                  name="image_url"
+                  value={formData.image_url}
+                  onChange={handleInputChange}
+                  placeholder="Image URL (optional)"
+                  className="px-4 py-2 border rounded-lg focus:ring-2 focus:ring-emerald-500 outline-none"
+                />
+              </div>
+              <textarea
+                name="description"
+                value={formData.description}
+                onChange={handleInputChange}
+                placeholder="Product Description"
+                rows="3"
+                className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-emerald-500 outline-none resize-none"
+              />
+              <button
+                type="submit"
+                className="flex items-center gap-2 bg-emerald-500 hover:bg-emerald-600 text-white px-6 py-2 rounded-lg font-bold shadow-sm transition-colors"
+              >
+                <Save size={18} /> Save Product
+              </button>
+            </form>
+          </div>
+        )}
 
         <div className="bg-white rounded-2xl shadow-sm border">
           <div className="p-6 border-b flex gap-4">
@@ -97,8 +181,6 @@ const ManufacturerProducts = () => {
               <input
                 className="w-full pl-9 pr-4 py-2 bg-slate-50 rounded-lg text-sm outline-none focus:ring-2 focus:ring-emerald-500"
                 placeholder="Search products..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
               />
             </div>
             <button className="flex items-center gap-2 px-4 py-2 bg-slate-100 hover:bg-slate-200 rounded-lg text-sm font-semibold">
@@ -112,55 +194,65 @@ const ManufacturerProducts = () => {
                 <th className="px-6 py-4 text-left">Product ID</th>
                 <th className="px-6 py-4 text-left">Name</th>
                 <th className="px-6 py-4 text-left">Category</th>
-                <th className="px-6 py-4 text-left">Current Stock</th>
                 <th className="px-6 py-4 text-left">Price</th>
-                <th className="px-6 py-4 text-left">Status</th>
+                <th className="px-6 py-4 text-left">Stock</th>
                 <th className="px-6 py-4 text-left">Actions</th>
               </tr>
             </thead>
             <tbody>
-              {filteredProducts.length ? (
-                filteredProducts.map((product) => (
-                  <tr key={product.product_def_id} className="border-t hover:bg-slate-50">
-                    <td className="px-6 py-4 font-bold text-slate-900">{product.product_def_id}</td>
-                    <td className="px-6 py-4 font-semibold">{product.name}</td>
-                    <td className="px-6 py-4 text-slate-600">{product.category || 'N/A'}</td>
-                    <td className="px-6 py-4">
-                      <div className="flex items-center gap-2">
-                        <span className="font-bold text-slate-900">{product.current_stock}</span>
-                        {product.current_stock < 20 && (
-                          <AlertCircle size={16} className="text-orange-500" title="Low stock" />
-                        )}
-                      </div>
-                    </td>
-                    <td className="px-6 py-4 font-semibold">${parseFloat(product.base_price).toFixed(2)}</td>
-                    <td className="px-6 py-4">
-                      <span className={`px-3 py-1 text-xs font-bold rounded-full ${
-                        product.is_active 
-                          ? 'bg-emerald-100 text-emerald-600' 
-                          : 'bg-slate-100 text-slate-600'
-                      }`}>
-                        {product.is_active ? 'Active' : 'Inactive'}
-                      </span>
-                    </td>
-                    <td className="px-6 py-4">
-                      <button 
-                        onClick={() => handleUpdateStock(product.product_def_id)}
-                        className="text-emerald-500 hover:text-emerald-600 font-semibold text-xs flex items-center gap-1"
-                      >
-                        <Edit2 size={14} /> Update Stock
-                      </button>
-                    </td>
-                  </tr>
-                ))
-              ) : (
-                <tr>
-                  <td colSpan="7" className="text-center py-10 text-slate-400">
-                    {searchTerm ? 'No products match your search' : 'No products found'}
-                  </td>
-                </tr>
-              )}
-            </tbody>
+  {products.length ? (
+    products.map((product) => (
+      // KEY: Use the unique 'product_def_id' from your SQL schema 
+      <tr key={product.product_def_id} className="border-t hover:bg-slate-50">
+        
+        {/* ID COLUMN: Display 'product_def_id'  */}
+        <td className="px-6 py-4 font-bold text-xs font-mono">
+          #{product.product_def_id}
+        </td>
+
+        {/* NAME COLUMN: Database uses 'name' and 'description'  */}
+        <td className="px-6 py-4">
+          <div className="font-bold">{product.name}</div>
+          <div className="text-xs text-slate-500 truncate max-w-xs">
+            {product.description || 'No description'}
+          </div>
+        </td>
+
+        {/* CATEGORY COLUMN: Database uses 'category'  */}
+        <td className="px-6 py-4 text-slate-500">
+          {product.category || 'N/A'}
+        </td>
+
+        {/* PRICE COLUMN: Database uses 'base_price'  */}
+        <td className="px-6 py-4 font-mono">
+          ${parseFloat(product.base_price || 0).toFixed(2)}
+        </td>
+
+        {/* STOCK COLUMN: Database uses 'current_stock'  */}
+        <td className="px-6 py-4">
+          <span className={`px-3 py-1 text-xs font-bold rounded-full ${
+            (product.current_stock || 0) > 10 ? 'bg-emerald-100 text-emerald-600' : 
+            (product.current_stock || 0) > 0 ? 'bg-yellow-100 text-yellow-600' : 'bg-red-100 text-red-600'
+          }`}>
+            {product.current_stock || 0} units
+          </span>
+        </td>
+
+        <td className="px-6 py-4">
+          <button className="text-emerald-500 hover:text-emerald-600 font-semibold text-xs">
+            Edit
+          </button>
+        </td>
+      </tr>
+    ))
+  ) : (
+    <tr>
+      <td colSpan="6" className="text-center py-10 text-slate-400">
+        No products found
+      </td>
+    </tr>
+  )}
+</tbody>
           </table>
         </div>
       </div>
@@ -168,4 +260,4 @@ const ManufacturerProducts = () => {
   );
 };
 
-export default ManufacturerProducts;
+export default Products;

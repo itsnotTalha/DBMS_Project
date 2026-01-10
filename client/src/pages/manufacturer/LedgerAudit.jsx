@@ -3,9 +3,8 @@ import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import Layout from '../Layout';
 import { ShieldCheck, Search, Download } from 'lucide-react';
-import { manufacturerMenuItems } from './menu';
 
-const ManufacturerLedgerAudit = () => {
+const LedgerAudit = () => {
   const navigate = useNavigate();
   const [user, setUser] = useState(null);
   const [ledger, setLedger] = useState([]);
@@ -29,10 +28,7 @@ const ManufacturerLedgerAudit = () => {
 
     const fetchLedger = async () => {
       try {
-        const token = localStorage.getItem('token') || sessionStorage.getItem('token');
-        const response = await axios.get('http://localhost:5000/api/manufacturer/ledger', {
-          headers: { Authorization: `Bearer ${token}` }
-        });
+        const response = await axios.get('http://localhost:5000/api/dashboard/ledger');
         setLedger(response.data);
       } catch (err) {
         console.error('Error fetching ledger:', err);
@@ -53,7 +49,7 @@ const ManufacturerLedgerAudit = () => {
   }
 
   return (
-    <Layout user={user} menuItems={manufacturerMenuItems}>
+    <Layout user={user}>
       <div className="p-8">
         <div className="flex justify-between items-center mb-8">
           <div>
@@ -144,4 +140,4 @@ const ManufacturerLedgerAudit = () => {
   );
 };
 
-export default ManufacturerLedgerAudit;
+export default LedgerAudit;

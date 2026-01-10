@@ -61,11 +61,11 @@ const Login = () => {
     // ... (Your existing JSX code remains exactly the same)
     <div className="flex w-full h-screen bg-white font-['Poppins']">
       {/* (Form and image code you provided) */}
-      <div className="w-full flex items-center justify-center lg:w-1/2">
+      <div className="w-full mt-10 flex items-start justify-center lg:w-1/2">
         <div className="w-full max-w-md px-8 py-10">
           <div className="mb-10">
-            <h1 className="text-3xl font-semibold text-gray-900 mb-2">Welcome back!</h1>
-            <p className="text-sm text-gray-500">Enter your Credentials to access your account</p>
+            <h1 className="text-3xl font-semibold text-gray-900 mb-2 text-center">Welcome back!</h1>
+            <p className="text-sm text-gray-500 text-center">Enter your Credentials to access your account</p>
           </div>
 
           <form onSubmit={handleSubmit} className="space-y-6">
@@ -99,7 +99,7 @@ const Login = () => {
               </label>
             </div>
 
-            <button type="submit" className="w-full bg-[#3A5B22] text-white py-3.5 rounded-lg text-sm font-medium hover:opacity-90 transition duration-200 shadow-sm">
+            <button type="submit" className="w-full bg-emerald-500 text-white py-3.5 rounded-lg text-sm font-medium hover:opacity-90 transition duration-200 shadow-sm">
               Login
             </button>
           </form>

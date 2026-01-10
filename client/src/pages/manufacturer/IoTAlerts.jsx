@@ -3,9 +3,8 @@ import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import Layout from '../Layout';
 import { Activity, AlertTriangle, Thermometer, Clock } from 'lucide-react';
-import { manufacturerMenuItems } from './menu';
 
-const ManufacturerIoTAlerts = () => {
+const IoTAlerts = () => {
   const navigate = useNavigate();
   const [user, setUser] = useState(null);
   const [alerts, setAlerts] = useState([]);
@@ -29,10 +28,7 @@ const ManufacturerIoTAlerts = () => {
 
     const fetchAlerts = async () => {
       try {
-        const token = localStorage.getItem('token') || sessionStorage.getItem('token');
-        const response = await axios.get('http://localhost:5000/api/manufacturer/iot-alerts', {
-          headers: { Authorization: `Bearer ${token}` }
-        });
+        const response = await axios.get('http://localhost:5000/api/iot/alerts');
         setAlerts(response.data);
       } catch (err) {
         console.error('Error fetching alerts:', err);
@@ -62,7 +58,7 @@ const ManufacturerIoTAlerts = () => {
   };
 
   return (
-    <Layout user={user} menuItems={manufacturerMenuItems}>
+    <Layout user={user}>
       <div className="p-8">
         <div className="flex justify-between items-center mb-8">
           <div>
@@ -146,4 +142,4 @@ const ManufacturerIoTAlerts = () => {
   );
 };
 
-export default ManufacturerIoTAlerts;
+export default IoTAlerts;

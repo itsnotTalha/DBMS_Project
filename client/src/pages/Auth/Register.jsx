@@ -70,8 +70,8 @@ const Register = () => {
         <div className="w-full max-w-md px-8 py-10">
           
           <div className="mb-8">
-            <h1 className="text-3xl font-semibold text-gray-900 mb-2">Create Account</h1>
-            <p className="text-sm text-gray-500">Join the Amanah Supply Chain System</p>
+            <h1 className="text-3xl font-semibold text-center text-gray-900 mb-2">Create Account</h1>
+            <p className="text-sm text-gray-500 text-center">Join the Amanah Supply Chain System</p>
           </div>
 
           <form onSubmit={handleSubmit} className="space-y-5">
@@ -197,7 +197,7 @@ const Register = () => {
 
             <button 
               type="submit" 
-              className="w-full bg-[#3A5B22] text-white py-3.5 rounded-lg text-sm font-medium hover:opacity-90 transition duration-200 mt-4 shadow-sm"
+              className="w-full bg-emerald-500 text-white py-3.5 rounded-lg text-sm font-medium hover:opacity-90 transition duration-200 mt-4 shadow-sm"
             >
               Complete Registration
             </button>

@@ -1,6 +1,9 @@
-import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
-import Login from './pages/Login';
-import Register from './pages/Register';
+import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
+import Login from './pages/Auth/Login';
+import Register from './pages/Auth/Register';
+import LandingPage from './pages/LandingPage';
+import BusinessLandingPage from './pages/BusinessLandingPage';
+import SimpleAuthLayout from './pages/Auth/SimpleAuthLayout';
 
 // Manufacturer Pages
 import ManufacturerDashboard from './pages/manufacturer/Dashboard';
@@ -50,8 +53,10 @@ function App() {
     <Router>
       <Routes>
         {/* Auth Routes */}
-        <Route path="/login" element={<Login />} />
-        <Route path="/register" element={<Register />} />
+        <Route element={<SimpleAuthLayout />}>
+          <Route path="/login" element={<Login />} />
+          <Route path="/register" element={<Register />} />
+        </Route>
 
         {/* Manufacturer Routes */}
         <Route path="/manufacturer/dashboard" element={<ManufacturerDashboard />} />
@@ -74,7 +79,8 @@ function App() {
         <Route path="/admin/dashboard" element={<AdminDashboard />} />
 
         {/* Default Route */}
-        <Route path="/" element={<Login />} />
+        <Route path="/" element={<LandingPage />} />
+        <Route path="/business" element={<BusinessLandingPage />} />
       </Routes>
     </Router>
   );

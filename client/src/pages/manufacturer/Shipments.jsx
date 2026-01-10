@@ -2,10 +2,9 @@ import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import Layout from '../Layout';
-import { Truck, Plus } from 'lucide-react';
-import { manufacturerMenuItems } from './menu';
+import { Truck, Plus, MapPin, Thermometer } from 'lucide-react';
 
-const ManufacturerShipments = () => {
+const Shipments = () => {
   const navigate = useNavigate();
   const [user, setUser] = useState(null);
   const [shipments, setShipments] = useState([]);
@@ -29,18 +28,8 @@ const ManufacturerShipments = () => {
 
     const fetchShipments = async () => {
       try {
-        const token = localStorage.getItem('token') || sessionStorage.getItem('token');
-        const response = await axios.get('http://localhost:5000/api/manufacturer/shipments', {
-          headers: { Authorization: `Bearer ${token}` }
-        });
-        const confirmedShipments = Array.isArray(response.data) 
-          ? response.data.filter(shipment => 
-              shipment.status.includes('Confirmed') || 
-              shipment.status.includes('In Transit') || 
-              shipment.status.includes('Delivered')
-            )
-          : [];
-        setShipments(confirmedShipments);
+        const response = await axios.get('http://localhost:5000/api/dashboard/shipments');
+        setShipments(response.data);
       } catch (err) {
         console.error('Error fetching shipments:', err);
       } finally {
@@ -60,14 +49,14 @@ const ManufacturerShipments = () => {
   }
 
   return (
-    <Layout user={user} menuItems={manufacturerMenuItems}>
+    <Layout user={user}>
       <div className="p-8">
         <div className="flex justify-between items-center mb-8">
           <div>
             <h2 className="text-2xl font-black flex items-center gap-3">
               <Truck className="text-emerald-500" /> Shipments
             </h2>
-            <p className="text-sm text-slate-400">Track all your confirmed shipments in real-time</p>
+            <p className="text-sm text-slate-400">Track all your shipments in real-time</p>
           </div>
           <button className="flex items-center gap-2 bg-emerald-500 hover:bg-emerald-600 text-white px-5 py-2.5 rounded-xl font-bold shadow">
             <Plus size={18} /> New Shipment
@@ -91,7 +80,7 @@ const ManufacturerShipments = () => {
 
         <div className="bg-white rounded-2xl shadow-sm border">
           <div className="p-6 border-b">
-            <h3 className="font-black">Confirmed Shipments</h3>
+            <h3 className="font-black">Active Shipments</h3>
           </div>
 
           <table className="w-full text-sm">
@@ -130,7 +119,7 @@ const ManufacturerShipments = () => {
               ) : (
                 <tr>
                   <td colSpan="7" className="text-center py-10 text-slate-400">
-                    No confirmed shipments. Confirm a shipment to see it here.
+                    No active shipments
                   </td>
                 </tr>
               )}
@@ -142,4 +131,4 @@ const ManufacturerShipments = () => {
   );
 };
 
-export default ManufacturerShipments;
+export default Shipments;

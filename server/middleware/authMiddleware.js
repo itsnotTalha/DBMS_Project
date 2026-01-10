@@ -16,4 +16,13 @@ export const verifyToken = (req, res, next) => {
   }
 };
 
-export default { verifyToken };
+export const verifyManufacturer = (req, res, next) => {
+  verifyToken(req, res, () => {
+    if (req.user.role !== 'Manufacturer') {
+      return res.status(403).json({ error: 'Access denied. Manufacturer role required.' });
+    }
+    next();
+  });
+};
+
+export default { verifyToken, verifyManufacturer };

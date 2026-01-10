@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import Layout from './Layout';
+import Layout from '../Layout';
 import { Store, TrendingUp, Users, Zap, LayoutDashboard, Box, Truck, AlertTriangle, FileText, MessageSquare } from 'lucide-react';
 
 const RetailerDashboard = () => {

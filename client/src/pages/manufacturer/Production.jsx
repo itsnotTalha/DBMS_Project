@@ -9,8 +9,16 @@ const Production = () => {
   const navigate = useNavigate();
   const [user, setUser] = useState(null);
   const [production, setProduction] = useState([]);
+  const [products, setProducts] = useState([]); 
   const [loading, setLoading] = useState(true);
   const [showNewProductionForm, setShowNewProductionForm] = useState(false);
+  
+  const [formData, setFormData] = useState({
+    product_def_id: '',
+    quantity: '',
+    manufacturing_date: new Date().toISOString().split('T')[0],
+    expiry_date: ''
+  });
 
   useEffect(() => {
     const storedUser = localStorage.getItem('user') || sessionStorage.getItem('user');
@@ -28,22 +36,70 @@ const Production = () => {
 
     setUser(parsedUser);
 
-    const fetchProduction = async () => {
+    const fetchData = async () => {
       try {
         const token = localStorage.getItem('token') || sessionStorage.getItem('token');
-        const response = await axios.get('http://localhost:5000/api/manufacturer/production', {
-          headers: { Authorization: `Bearer ${token}` }
-        });
-        setProduction(Array.isArray(response.data) ? response.data : []);
+        const config = { headers: { Authorization: `Bearer ${token}` } };
+
+        const [prodRes, productsRes] = await Promise.all([
+          axios.get('http://localhost:5000/api/manufacturer/production', config),
+          axios.get('http://localhost:5000/api/manufacturer/products', config)
+        ]);
+
+        setProduction(Array.isArray(prodRes.data) ? prodRes.data : []);
+        setProducts(Array.isArray(productsRes.data) ? productsRes.data : []);
       } catch (err) {
-        console.error('Error fetching production data:', err);
+        console.error('Error fetching data:', err);
       } finally {
         setLoading(false);
       }
     };
 
-    fetchProduction();
+    fetchData();
   }, [navigate]);
+
+  const handleInputChange = (e) => {
+    const { name, value } = e.target;
+    setFormData(prev => ({
+      ...prev,
+      [name]: value
+    }));
+  };
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    try {
+      const token = localStorage.getItem('token') || sessionStorage.getItem('token');
+      
+      await axios.post('http://localhost:5000/api/manufacturer/production', formData, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      
+      const response = await axios.get('http://localhost:5000/api/manufacturer/production', {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      
+      setProduction(Array.isArray(response.data) ? response.data : []);
+      setShowNewProductionForm(false);
+      
+      setFormData({ 
+        product_def_id: '', 
+        quantity: '', 
+        manufacturing_date: new Date().toISOString().split('T')[0],
+        expiry_date: '' 
+      });
+      
+      alert('New production batch created successfully!');
+    } catch (err) {
+      console.error('Error creating batch:', err);
+      alert('Failed to create batch: ' + (err.response?.data?.error || err.message));
+    }
+  };
+
+  // --- UPDATED STATS LOGIC ---
+  // Now counts total unique batches regardless of status
+  const activeBatches = production.length; 
+  const unitsProduced = production.reduce((acc, p) => acc + (parseInt(p.quantity) || 0), 0);
 
   if (loading) {
     return (
@@ -72,41 +128,80 @@ const Production = () => {
         </div>
 
         {showNewProductionForm && (
-          <div className="bg-white rounded-2xl shadow-sm border p-6 mb-8">
+          <div className="bg-white rounded-2xl shadow-sm border p-6 mb-8 animate-fade-in">
             <h3 className="font-bold text-lg mb-4">Create New Production Batch</h3>
-            <form className="space-y-4">
+            <form className="space-y-4" onSubmit={handleSubmit}>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <input
-                  type="text"
-                  placeholder="Batch ID"
-                  className="px-4 py-2 border rounded-lg focus:ring-2 focus:ring-emerald-500 outline-none"
-                />
-                <input
-                  type="text"
-                  placeholder="Product Name"
-                  className="px-4 py-2 border rounded-lg focus:ring-2 focus:ring-emerald-500 outline-none"
-                />
-                <input
-                  type="number"
-                  placeholder="Quantity"
-                  className="px-4 py-2 border rounded-lg focus:ring-2 focus:ring-emerald-500 outline-none"
-                />
-                <input
-                  type="date"
-                  className="px-4 py-2 border rounded-lg focus:ring-2 focus:ring-emerald-500 outline-none"
-                />
+                
+                <div className="flex flex-col">
+                  <label className="text-xs text-slate-500 mb-1">Select Product</label>
+                  <select
+                    name="product_def_id"
+                    value={formData.product_def_id}
+                    onChange={handleInputChange}
+                    className="px-4 py-2 border rounded-lg focus:ring-2 focus:ring-emerald-500 outline-none bg-white"
+                    required
+                  >
+                    <option value="">-- Choose a Product --</option>
+                    {products.length > 0 ? (
+                      products.map(p => (
+                        <option key={p.product_def_id} value={p.product_def_id}>
+                          {p.name}
+                        </option>
+                      ))
+                    ) : (
+                      <option disabled>No products found</option>
+                    )}
+                  </select>
+                </div>
+
+                <div className="flex flex-col">
+                  <label className="text-xs text-slate-500 mb-1">Quantity</label>
+                  <input
+                    type="number"
+                    name="quantity"
+                    value={formData.quantity}
+                    onChange={handleInputChange}
+                    placeholder="Enter quantity"
+                    className="px-4 py-2 border rounded-lg focus:ring-2 focus:ring-emerald-500 outline-none"
+                    required
+                    min="1"
+                  />
+                </div>
+                <div className="flex flex-col">
+                  <label className="text-xs text-slate-500 mb-1">Manufacturing Date</label>
+                  <input
+                    type="date"
+                    name="manufacturing_date"
+                    value={formData.manufacturing_date}
+                    onChange={handleInputChange}
+                    className="px-4 py-2 border rounded-lg focus:ring-2 focus:ring-emerald-500 outline-none"
+                    required
+                  />
+                </div>
+                <div className="flex flex-col">
+                  <label className="text-xs text-slate-500 mb-1">Expiry Date</label>
+                  <input
+                    type="date"
+                    name="expiry_date"
+                    value={formData.expiry_date}
+                    onChange={handleInputChange}
+                    className="px-4 py-2 border rounded-lg focus:ring-2 focus:ring-emerald-500 outline-none"
+                    required
+                  />
+                </div>
               </div>
-              <div className="flex gap-4">
+              <div className="flex gap-4 mt-4">
                 <button
                   type="submit"
-                  className="flex-1 bg-emerald-500 hover:bg-emerald-600 text-white font-semibold py-2 rounded-lg"
+                  className="flex-1 bg-emerald-500 hover:bg-emerald-600 text-white font-semibold py-2 rounded-lg transition-colors"
                 >
                   Create Batch
                 </button>
                 <button
                   type="button"
                   onClick={() => setShowNewProductionForm(false)}
-                  className="flex-1 bg-slate-200 hover:bg-slate-300 text-slate-700 font-semibold py-2 rounded-lg"
+                  className="flex-1 bg-slate-200 hover:bg-slate-300 text-slate-700 font-semibold py-2 rounded-lg transition-colors"
                 >
                   Cancel
                 </button>
@@ -115,22 +210,15 @@ const Production = () => {
           </div>
         )}
 
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
+        {/* --- STATS SECTION UPDATED: 2 Cards Only --- */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
           <div className="bg-white rounded-2xl p-6 border shadow-sm">
             <p className="text-xs uppercase font-bold text-slate-400 mb-2">Active Batches</p>
-            <p className="text-3xl font-black">12</p>
+            <p className="text-3xl font-black">{activeBatches}</p>
           </div>
           <div className="bg-white rounded-2xl p-6 border shadow-sm">
             <p className="text-xs uppercase font-bold text-slate-400 mb-2">Units Produced</p>
-            <p className="text-3xl font-black">4,850</p>
-          </div>
-          <div className="bg-white rounded-2xl p-6 border shadow-sm">
-            <p className="text-xs uppercase font-bold text-slate-400 mb-2">Completed</p>
-            <p className="text-3xl font-black">8</p>
-          </div>
-          <div className="bg-white rounded-2xl p-6 border shadow-sm">
-            <p className="text-xs uppercase font-bold text-slate-400 mb-2">In Progress</p>
-            <p className="text-3xl font-black text-yellow-600">4</p>
+            <p className="text-3xl font-black">{unitsProduced.toLocaleString()}</p>
           </div>
         </div>
 
@@ -154,20 +242,20 @@ const Production = () => {
               {production.length ? (
                 production.map((item, i) => (
                   <tr key={i} className="border-t hover:bg-slate-50">
-                    <td className="px-6 py-4 font-bold">{item.batchId || `BAT-${i + 1}`}</td>
-                    <td className="px-6 py-4">{item.product || 'N/A'}</td>
+                    <td className="px-6 py-4 font-bold">{item.batch_number}</td>
+                    <td className="px-6 py-4">{item.product_name || 'N/A'}</td>
                     <td className="px-6 py-4 text-center">{item.quantity || 0}</td>
                     <td className="px-6 py-4">
                       <span className={`px-3 py-1 text-xs font-bold rounded-full ${
-                        item.status === 'Completed' ? 'bg-green-100 text-green-600' :
-                        item.status === 'In Progress' ? 'bg-yellow-100 text-yellow-600' :
+                        item.status === 'Active' ? 'bg-blue-100 text-blue-600' :
+                        item.status === 'Completed' ? 'bg-emerald-100 text-emerald-600' :
                         'bg-slate-100 text-slate-600'
                       }`}>
                         {item.status || 'Pending'}
                       </span>
                     </td>
-                    <td className="px-6 py-4 text-xs text-slate-500">{item.startDate || new Date().toLocaleDateString()}</td>
-                    <td className="px-6 py-4 text-xs text-slate-500">{item.endDate || '-'}</td>
+                    <td className="px-6 py-4 text-xs text-slate-500">{new Date(item.manufacturing_date).toLocaleDateString()}</td>
+                    <td className="px-6 py-4 text-xs text-slate-500">{new Date(item.expiry_date).toLocaleDateString()}</td>
                   </tr>
                 ))
               ) : (
