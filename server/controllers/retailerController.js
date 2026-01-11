@@ -206,16 +206,6 @@ export const createOrder = async (req, res) => {
       );
     }
 
-    // Reserve stock from manufacturer's inventory
-    for (const item of itemDetails) {
-      await connection.query(
-        `UPDATE Product_Definitions 
-         SET reserved_stock = reserved_stock + ?
-         WHERE product_def_id = ?`,
-        [item.quantity, item.productId]
-      );
-    }
-
     await connection.commit();
 
     res.status(201).json({
