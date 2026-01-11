@@ -74,71 +74,68 @@ const RetailerDashboard = () => {
           <p className="text-slate-600">Manage your retail operations and inventory</p>
         </div>
 
-        {/* Main Stats Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
-          <div className="bg-white rounded-2xl p-6 shadow-sm border border-slate-200">
-            <div className="flex items-center justify-between mb-4">
-              <div className="p-3 bg-blue-100 rounded-xl">
-                <Package className="text-blue-600" size={24} />
+        {/* All Stats in Single Flex Row */}
+        <div className="flex flex-wrap gap-4 mb-8">
+          <div className="flex-1 min-w-[150px] bg-white rounded-2xl p-5 shadow-sm border border-slate-200">
+            <div className="flex items-center justify-between mb-3">
+              <div className="p-2 bg-blue-100 rounded-xl">
+                <Package className="text-blue-600" size={20} />
               </div>
-              <span className="text-3xl font-black text-slate-900">{stats.total_stock_quantity}</span>
+              <span className="text-2xl font-black text-slate-900">{stats.total_stock_quantity}</span>
             </div>
-            <p className="text-slate-600 text-sm font-medium">Total Stock Quantity</p>
+            <p className="text-slate-600 text-xs font-medium">Total Stock</p>
           </div>
 
-          <div className="bg-white rounded-2xl p-6 shadow-sm border border-slate-200">
-            <div className="flex items-center justify-between mb-4">
-              <div className="p-3 bg-green-100 rounded-xl">
-                <Store className="text-green-600" size={24} />
+          <div className="flex-1 min-w-[150px] bg-white rounded-2xl p-5 shadow-sm border border-slate-200">
+            <div className="flex items-center justify-between mb-3">
+              <div className="p-2 bg-green-100 rounded-xl">
+                <Store className="text-green-600" size={20} />
               </div>
-              <span className="text-3xl font-black text-slate-900">{stats.unique_products_count}</span>
+              <span className="text-2xl font-black text-slate-900">{stats.unique_products_count}</span>
             </div>
-            <p className="text-slate-600 text-sm font-medium">Unique Products</p>
+            <p className="text-slate-600 text-xs font-medium">Unique Products</p>
           </div>
 
-          <div className="bg-white rounded-2xl p-6 shadow-sm border border-slate-200">
-            <div className="flex items-center justify-between mb-4">
-              <div className="p-3 bg-yellow-100 rounded-xl">
-                <AlertTriangle className="text-yellow-600" size={24} />
+          <div className="flex-1 min-w-[150px] bg-white rounded-2xl p-5 shadow-sm border border-slate-200">
+            <div className="flex items-center justify-between mb-3">
+              <div className="p-2 bg-yellow-100 rounded-xl">
+                <AlertTriangle className="text-yellow-600" size={20} />
               </div>
-              <span className="text-3xl font-black text-yellow-600">{stats.low_stock_items}</span>
+              <span className="text-2xl font-black text-yellow-600">{stats.low_stock_items}</span>
             </div>
-            <p className="text-slate-600 text-sm font-medium">Low Stock Items</p>
+            <p className="text-slate-600 text-xs font-medium">Low Stock</p>
           </div>
 
-          <div className="bg-white rounded-2xl p-6 shadow-sm border border-slate-200">
-            <div className="flex items-center justify-between mb-4">
-              <div className="p-3 bg-purple-100 rounded-xl">
-                <ShoppingCart className="text-purple-600" size={24} />
+          <div className="flex-1 min-w-[150px] bg-white rounded-2xl p-5 shadow-sm border border-slate-200">
+            <div className="flex items-center justify-between mb-3">
+              <div className="p-2 bg-purple-100 rounded-xl">
+                <ShoppingCart className="text-purple-600" size={20} />
               </div>
-              <span className="text-3xl font-black text-slate-900">{stats.pending_orders_count}</span>
+              <span className="text-2xl font-black text-slate-900">{stats.pending_orders_count}</span>
             </div>
-            <p className="text-slate-600 text-sm font-medium">Pending Orders</p>
-          </div>
-        </div>
-
-        {/* Secondary Stats */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
-          <div className="bg-white rounded-2xl p-6 shadow-sm border border-slate-200">
-            <div className="flex items-center justify-between mb-4">
-              <div className="p-3 bg-indigo-100 rounded-xl">
-                <Users className="text-indigo-600" size={24} />
-              </div>
-              <span className="text-3xl font-black text-slate-900">{stats.total_customers}</span>
-            </div>
-            <p className="text-slate-600 text-sm font-medium">Total Customers</p>
+            <p className="text-slate-600 text-xs font-medium">Pending Orders</p>
           </div>
 
-          <div className="bg-white rounded-2xl p-6 shadow-sm border border-slate-200">
-            <div className="flex items-center justify-between mb-4">
-              <div className="p-3 bg-emerald-100 rounded-xl">
-                <DollarSign className="text-emerald-600" size={24} />
+          <div className="flex-1 min-w-[150px] bg-white rounded-2xl p-5 shadow-sm border border-slate-200">
+            <div className="flex items-center justify-between mb-3">
+              <div className="p-2 bg-indigo-100 rounded-xl">
+                <Users className="text-indigo-600" size={20} />
               </div>
-              <span className="text-3xl font-black text-emerald-600">
+              <span className="text-2xl font-black text-slate-900">{stats.total_customers}</span>
+            </div>
+            <p className="text-slate-600 text-xs font-medium">Total Customers</p>
+          </div>
+
+          <div className="flex-1 min-w-[150px] bg-white rounded-2xl p-5 shadow-sm border border-slate-200">
+            <div className="flex items-center justify-between mb-3">
+              <div className="p-2 bg-emerald-100 rounded-xl">
+                <DollarSign className="text-emerald-600" size={20} />
+              </div>
+              <span className="text-2xl font-black text-emerald-600">
                 ${stats.monthly_revenue?.toLocaleString() || '0'}
               </span>
             </div>
-            <p className="text-slate-600 text-sm font-medium">Monthly Revenue</p>
+            <p className="text-slate-600 text-xs font-medium">Monthly Revenue</p>
           </div>
         </div>
 
