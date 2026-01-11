@@ -150,17 +150,11 @@ const RetailerDashboard = () => {
               <Clock size={18} className="text-blue-500" /> Recent Customer Orders
             </h3>
             {stats.recent_customer_orders?.length > 0 ? (
-              <div className="space-y-3">
+              <div className="flex flex-wrap gap-3">
                 {stats.recent_customer_orders.map((order, i) => (
-                  <div key={i} className="flex items-center justify-between p-3 bg-slate-50 rounded-xl">
-                    <div>
+                  <div key={i} className="flex-1 min-w-[200px] max-w-[280px] p-4 bg-slate-50 rounded-xl">
+                    <div className="flex items-center justify-between mb-2">
                       <p className="font-semibold text-sm">{order.first_name} {order.last_name}</p>
-                      <p className="text-xs text-slate-500">
-                        {new Date(order.order_date).toLocaleDateString()}
-                      </p>
-                    </div>
-                    <div className="text-right">
-                      <p className="font-bold text-emerald-600">${parseFloat(order.total_amount).toFixed(2)}</p>
                       <span className={`text-xs px-2 py-0.5 rounded-full ${
                         order.status === 'Completed' ? 'bg-green-100 text-green-600' :
                         order.status === 'Processing' ? 'bg-yellow-100 text-yellow-600' :
@@ -169,6 +163,10 @@ const RetailerDashboard = () => {
                         {order.status}
                       </span>
                     </div>
+                    <p className="text-xs text-slate-500 mb-2">
+                      {new Date(order.order_date).toLocaleDateString()}
+                    </p>
+                    <p className="font-bold text-emerald-600">${parseFloat(order.total_amount).toFixed(2)}</p>
                   </div>
                 ))}
               </div>
@@ -183,19 +181,17 @@ const RetailerDashboard = () => {
               <TrendingUp size={18} className="text-green-500" /> Top Selling Products
             </h3>
             {stats.top_selling_products?.length > 0 ? (
-              <div className="space-y-3">
+              <div className="flex flex-wrap gap-3">
                 {stats.top_selling_products.map((product, i) => (
-                  <div key={i} className="flex items-center justify-between p-3 bg-slate-50 rounded-xl">
-                    <div className="flex items-center gap-3">
+                  <div key={i} className="flex-1 min-w-[180px] max-w-[240px] p-4 bg-slate-50 rounded-xl">
+                    <div className="flex items-center gap-2 mb-2">
                       <span className="w-6 h-6 bg-blue-500 text-white rounded-full flex items-center justify-center text-xs font-bold">
                         {i + 1}
                       </span>
-                      <p className="font-semibold text-sm">{product.name}</p>
+                      <p className="font-semibold text-sm truncate">{product.name}</p>
                     </div>
-                    <div className="text-right">
-                      <p className="font-bold text-slate-900">{product.total_sold} sold</p>
-                      <p className="text-xs text-emerald-600">${parseFloat(product.revenue).toFixed(2)}</p>
-                    </div>
+                    <p className="font-bold text-slate-900">{product.total_sold} sold</p>
+                    <p className="text-sm text-emerald-600">${parseFloat(product.revenue).toFixed(2)}</p>
                   </div>
                 ))}
               </div>

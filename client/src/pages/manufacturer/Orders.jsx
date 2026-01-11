@@ -83,7 +83,19 @@ const Orders = () => {
         { fulfillment_type: fulfillmentType },
         { headers: { Authorization: `Bearer ${token}` } }
       );
-      alert('Order accepted successfully!');
+      
+      if (fulfillmentType === 'production') {
+        const goToProduction = window.confirm(
+          'Order accepted! Production batches have been created.\n\nWould you like to go to the Production page to manage them?'
+        );
+        if (goToProduction) {
+          navigate('/manufacturer/production');
+          return;
+        }
+      } else {
+        alert('Order accepted! Stock has been deducted from inventory.');
+      }
+      
       setShowModal(false);
       setSelectedOrder(null);
       fetchOrders();
@@ -198,7 +210,7 @@ const Orders = () => {
                               onClick={() => {
                                 setSelectedOrder(order);
                                 setShowModal(true);
-                                setFulfillmentType('direct_delivery');
+                                setFulfillmentType('inventory');
                               }}
                               disabled={processingOrderId === order.b2b_order_id}
                               className="text-green-500 hover:text-green-600 font-semibold text-xs flex items-center gap-1 disabled:opacity-50"
@@ -246,9 +258,9 @@ const Orders = () => {
                 <p className="text-xs font-bold text-slate-400 mb-3">ORDER ITEMS:</p>
                 {selectedOrder.items?.map((item, i) => (
                   <div key={i} className="mb-3 pb-3 border-b last:border-0">
-                    <p className="text-sm font-semibold">Product ID: {item.product_def_id}</p>
+                    <p className="text-sm font-semibold">{item.product_name || `Product ID: ${item.product_def_id}`}</p>
                     <div className="flex justify-between text-xs text-slate-500 mt-1">
-                      <span>Qty: {item.quantity_ordered}</span>
+                      <span>Qty: {item.quantity}</span>
                       <span>${parseFloat(item.unit_price || 0).toFixed(2)} each</span>
                     </div>
                   </div>
@@ -258,18 +270,18 @@ const Orders = () => {
               <div className="border-t pt-4">
                 <p className="text-sm font-bold mb-3">How would you like to fulfill this order?</p>
                 <div className="space-y-3">
-                  <label className="flex items-center p-3 border rounded-lg cursor-pointer hover:bg-emerald-50" style={{borderColor: fulfillmentType === 'direct_delivery' ? '#10b981' : '#cbd5e1'}}>
+                  <label className="flex items-center p-3 border rounded-lg cursor-pointer hover:bg-emerald-50" style={{borderColor: fulfillmentType === 'inventory' ? '#10b981' : '#cbd5e1'}}>
                     <input
                       type="radio"
                       name="fulfillment"
-                      value="direct_delivery"
-                      checked={fulfillmentType === 'direct_delivery'}
+                      value="inventory"
+                      checked={fulfillmentType === 'inventory'}
                       onChange={(e) => setFulfillmentType(e.target.value)}
                       className="mr-3"
                     />
                     <div>
                       <p className="font-semibold text-sm">Direct Delivery</p>
-                      <p className="text-xs text-slate-500">Ship from existing stock</p>
+                      <p className="text-xs text-slate-500">Ship from existing stock (deducts inventory)</p>
                     </div>
                   </label>
 
@@ -284,7 +296,7 @@ const Orders = () => {
                     />
                     <div>
                       <p className="font-semibold text-sm">Production Request</p>
-                      <p className="text-xs text-slate-500">Create production orders</p>
+                      <p className="text-xs text-slate-500">Creates production batches (see Production page)</p>
                     </div>
                   </label>
                 </div>
@@ -326,13 +338,12 @@ const Orders = () => {
               <div className="space-y-3 max-h-96 overflow-y-auto">
                 {selectedOrder.items?.map((item, i) => (
                   <div key={i} className="border-l-4 border-blue-500 pl-4 py-2">
-                    <p className="font-semibold">Product ID: {item.product_def_id}</p>
+                    <p className="font-semibold">{item.product_name || `Product ID: ${item.product_def_id}`}</p>
                     <div className="grid grid-cols-3 gap-2 text-sm text-slate-600 mt-1">
-                      <div>Qty: <span className="font-bold">{item.quantity_ordered}</span></div>
+                      <div>Qty: <span className="font-bold">{item.quantity}</span></div>
                       <div>Unit Price: <span className="font-bold">${parseFloat(item.unit_price).toFixed(2)}</span></div>
-                      <div>Subtotal: <span className="font-bold">${(item.quantity_ordered * item.unit_price).toFixed(2)}</span></div>
+                      <div>Subtotal: <span className="font-bold">${(item.quantity * item.unit_price).toFixed(2)}</span></div>
                     </div>
-                    <p className="text-xs text-slate-500 mt-1">Status: {item.status}</p>
                   </div>
                 ))}
               </div>
