@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import Layout from '../Layout';
 import { Box, Plus, Search, Filter, Save, X } from 'lucide-react';
+import { manufacturerMenuItems } from './menu';
 
 const Products = () => {
   const navigate = useNavigate();
@@ -91,7 +92,7 @@ const Products = () => {
   }
 
   return (
-    <Layout user={user}>
+    <Layout user={user} menuItems={manufacturerMenuItems}>
       <div className="p-8">
         <div className="flex justify-between items-center mb-8">
           <div>

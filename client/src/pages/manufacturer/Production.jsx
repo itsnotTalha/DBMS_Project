@@ -97,9 +97,10 @@ const Production = () => {
   };
 
   // --- UPDATED STATS LOGIC ---
-  // Now counts total unique batches regardless of status
-  const activeBatches = production.length; 
-  const unitsProduced = production.reduce((acc, p) => acc + (parseInt(p.quantity) || 0), 0);
+  // Count batches and items produced
+  const activeBatches = production.filter(p => p.status === 'Active').length;
+  const totalBatches = production.length;
+  const unitsProduced = production.reduce((acc, p) => acc + (parseInt(p.items_count) || 0), 0);
 
   if (loading) {
     return (
@@ -210,15 +211,19 @@ const Production = () => {
           </div>
         )}
 
-        {/* --- STATS SECTION UPDATED: 2 Cards Only --- */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+        {/* --- STATS SECTION UPDATED: 3 Cards --- */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+          <div className="bg-white rounded-2xl p-6 border shadow-sm">
+            <p className="text-xs uppercase font-bold text-slate-400 mb-2">Total Batches</p>
+            <p className="text-3xl font-black">{totalBatches}</p>
+          </div>
           <div className="bg-white rounded-2xl p-6 border shadow-sm">
             <p className="text-xs uppercase font-bold text-slate-400 mb-2">Active Batches</p>
-            <p className="text-3xl font-black">{activeBatches}</p>
+            <p className="text-3xl font-black text-blue-500">{activeBatches}</p>
           </div>
           <div className="bg-white rounded-2xl p-6 border shadow-sm">
             <p className="text-xs uppercase font-bold text-slate-400 mb-2">Units Produced</p>
-            <p className="text-3xl font-black">{unitsProduced.toLocaleString()}</p>
+            <p className="text-3xl font-black text-emerald-500">{unitsProduced.toLocaleString()}</p>
           </div>
         </div>
 
@@ -230,25 +235,26 @@ const Production = () => {
           <table className="w-full text-sm">
             <thead className="text-xs text-slate-400 uppercase bg-slate-50">
               <tr>
-                <th className="px-6 py-4 text-left">Batch ID</th>
+                <th className="px-6 py-4 text-left">Batch Number</th>
                 <th className="px-6 py-4 text-left">Product</th>
-                <th className="px-6 py-4 text-center">Quantity</th>
+                <th className="px-6 py-4 text-center">Items</th>
                 <th className="px-6 py-4 text-left">Status</th>
-                <th className="px-6 py-4 text-left">Start Date</th>
-                <th className="px-6 py-4 text-left">End Date</th>
+                <th className="px-6 py-4 text-left">Mfg Date</th>
+                <th className="px-6 py-4 text-left">Expiry Date</th>
               </tr>
             </thead>
             <tbody>
               {production.length ? (
                 production.map((item, i) => (
                   <tr key={i} className="border-t hover:bg-slate-50">
-                    <td className="px-6 py-4 font-bold">{item.batch_number}</td>
-                    <td className="px-6 py-4">{item.product_name || 'N/A'}</td>
-                    <td className="px-6 py-4 text-center">{item.quantity || 0}</td>
+                    <td className="px-6 py-4 font-mono text-xs font-bold">{item.batch_number}</td>
+                    <td className="px-6 py-4 font-semibold">{item.product_name || 'N/A'}</td>
+                    <td className="px-6 py-4 text-center font-bold">{item.items_count || 0}</td>
                     <td className="px-6 py-4">
                       <span className={`px-3 py-1 text-xs font-bold rounded-full ${
                         item.status === 'Active' ? 'bg-blue-100 text-blue-600' :
                         item.status === 'Completed' ? 'bg-emerald-100 text-emerald-600' :
+                        item.status === 'In Progress' ? 'bg-yellow-100 text-yellow-600' :
                         'bg-slate-100 text-slate-600'
                       }`}>
                         {item.status || 'Pending'}

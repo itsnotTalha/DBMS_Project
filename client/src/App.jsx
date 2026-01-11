@@ -40,12 +40,13 @@ const RootRedirect = () => {
   const role = user.role; 
 
   // 4. Redirect based on Role (Matches your MySQL ENUMs exactly)
-  if (role === 'Admin') return <Navigate to="/admin-dashboard" replace />;
-  if (role === 'Retailer') return <Navigate to="/retailer-dashboard" replace />;
-  if (role === 'Customer') return <Navigate to="/customer-dashboard" replace />;
+  if (role === 'Admin') return <Navigate to="/admin/dashboard" replace />;
+  if (role === 'Retailer') return <Navigate to="/retailer/dashboard" replace />;
+  if (role === 'Customer') return <Navigate to="/customer/dashboard" replace />;
+  if (role === 'Manufacturer') return <Navigate to="/manufacturer/dashboard" replace />;
   
-  // 5. Fallback for 'Manufacturer' or others
-  return <Navigate to="/dashboard" replace />;
+  // 5. Fallback
+  return <Navigate to="/login" replace />;
 };
 
 function App() {

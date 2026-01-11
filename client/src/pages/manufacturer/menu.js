@@ -5,9 +5,8 @@ import {
   Truck,
   Activity,
   ShieldCheck,
-  Plus,
-  Zap,
-  Briefcase,
+  Package,
+  ClipboardList,
 } from 'lucide-react';
 
 export const manufacturerMenuItems = [
@@ -22,12 +21,12 @@ export const manufacturerMenuItems = [
     path: '/manufacturer/products',
   },
   {
-    icon: React.createElement(Plus, { size: 18 }),
-    label: 'Add Product',
-    path: '/manufacturer/add-product',
+    icon: React.createElement(ClipboardList, { size: 18 }),
+    label: 'Orders',
+    path: '/manufacturer/orders',
   },
   {
-    icon: React.createElement(Briefcase, { size: 18 }),
+    icon: React.createElement(Package, { size: 18 }),
     label: 'Production',
     path: '/manufacturer/production',
   },
@@ -45,10 +44,5 @@ export const manufacturerMenuItems = [
     icon: React.createElement(ShieldCheck, { size: 18 }),
     label: 'Ledger Audit',
     path: '/manufacturer/ledger-audit',
-  },
-  {
-    icon: React.createElement(Zap, { size: 18 }),
-    label: 'B2B Orders',
-    path: '/manufacturer/orders',
   },
 ];

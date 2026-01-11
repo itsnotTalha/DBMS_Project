@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import Layout from '../Layout';
 import { Briefcase, Search, Filter, Check, X } from 'lucide-react';
+import { manufacturerMenuItems } from './menu';
 
 const getStatusClasses = (status) => {
   if (!status) return 'bg-slate-100 text-slate-600';
@@ -26,23 +27,42 @@ const Orders = () => {
   const [processingOrderId, setProcessingOrderId] = useState(null);
   const [searchTerm, setSearchTerm] = useState('');
 
-  const verifyAuthAndLoadOrders = async () => {
+  useEffect(() => {
+    const verifyAuthAndLoadOrders = async () => {
+      try {
+        const storedUser = localStorage.getItem('user') || sessionStorage.getItem('user');
+        if (!storedUser) {
+          navigate('/login');
+          return;
+        }
+
+        const parsedUser = JSON.parse(storedUser);
+        if (parsedUser.role?.toLowerCase() !== 'manufacturer') {
+          alert('Access Denied');
+          navigate('/login');
+          return;
+        }
+
+        setUser(parsedUser);
+
+        const token = localStorage.getItem('token') || sessionStorage.getItem('token');
+        const response = await axios.get('http://localhost:5000/api/manufacturer/orders', {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+        setOrders(response.data.data || []);
+      } catch (err) {
+        console.error('Error fetching orders:', err);
+        setOrders([]);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    verifyAuthAndLoadOrders();
+  }, [navigate]);
+
+  const fetchOrders = async () => {
     try {
-      const storedUser = localStorage.getItem('user') || sessionStorage.getItem('user');
-      if (!storedUser) {
-        navigate('/login');
-        return;
-      }
-
-      const parsedUser = JSON.parse(storedUser);
-      if (parsedUser.role?.toLowerCase() !== 'manufacturer') {
-        alert('Access Denied');
-        navigate('/login');
-        return;
-      }
-
-      setUser(parsedUser);
-
       const token = localStorage.getItem('token') || sessionStorage.getItem('token');
       const response = await axios.get('http://localhost:5000/api/manufacturer/orders', {
         headers: { Authorization: `Bearer ${token}` }
@@ -50,15 +70,8 @@ const Orders = () => {
       setOrders(response.data.data || []);
     } catch (err) {
       console.error('Error fetching orders:', err);
-      setOrders([]);
-    } finally {
-      setLoading(false);
     }
   };
-
-  useEffect(() => {
-    verifyAuthAndLoadOrders();
-  }, [navigate]);
 
   const handleAcceptOrder = async () => {
     if (!selectedOrder || !fulfillmentType) return;
@@ -73,7 +86,7 @@ const Orders = () => {
       alert('Order accepted successfully!');
       setShowModal(false);
       setSelectedOrder(null);
-      verifyAuthAndLoadOrders();
+      fetchOrders();
     } catch (err) {
       alert('Error accepting order: ' + (err.response?.data?.error || err.message));
     } finally {
@@ -92,7 +105,7 @@ const Orders = () => {
           { headers: { Authorization: `Bearer ${token}` } }
         );
         alert('Order rejected');
-        verifyAuthAndLoadOrders();
+        fetchOrders();
       } catch (err) {
         alert('Error rejecting order: ' + (err.response?.data?.error || err.message));
       } finally {
@@ -115,7 +128,7 @@ const Orders = () => {
   }
 
   return (
-    <Layout user={user}>
+    <Layout user={user} menuItems={manufacturerMenuItems}>
       <div className="p-8">
         <div className="flex justify-between items-center mb-8">
           <div>

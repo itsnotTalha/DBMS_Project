@@ -3,26 +3,32 @@ import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import {
   LayoutDashboard, Box, Truck, Activity, ShieldCheck,
-  Bell, Thermometer
+  Bell, Thermometer, Package, ClipboardList
 } from 'lucide-react';
 import Layout from '../Layout';
+
+const API_BASE = 'http://localhost:5000/api/manufacturer';
 
 const Dashboard = () => {
   const navigate = useNavigate();
   const [user, setUser] = useState(null);
-
-  // Default stats
-  const [stats, setStats] = useState({ batches: 0, units: 0, transit: 0, alerts: 0 });
-  const [shipments, setShipments] = useState([]);
-  const [ledger, setLedger] = useState([]);
+  const [stats, setStats] = useState({
+    total_products: 0,
+    active_batches: 0,
+    pending_orders: 0,
+    total_stock: 0
+  });
+  const [recentTransactions, setRecentTransactions] = useState([]);
   const [loading, setLoading] = useState(true);
 
   const manufacturerMenuItems = [
-    { icon: <LayoutDashboard size={18} />, label: 'Dashboard', path: '/dashboard' },
-    { icon: <Box size={18} />, label: 'Products', path: '/products' },
-    { icon: <Truck size={18} />, label: 'Shipments', path: '/shipments' },
-    { icon: <Activity size={18} />, label: 'IoT Alerts', path: '/iot-alerts' },
-    { icon: <ShieldCheck size={18} />, label: 'Ledger Audit', path: '/ledger-audit' },
+    { icon: <LayoutDashboard size={18} />, label: 'Dashboard', path: '/manufacturer/dashboard' },
+    { icon: <Box size={18} />, label: 'Products', path: '/manufacturer/products' },
+    { icon: <ClipboardList size={18} />, label: 'Orders', path: '/manufacturer/orders' },
+    { icon: <Package size={18} />, label: 'Production', path: '/manufacturer/production' },
+    { icon: <Truck size={18} />, label: 'Shipments', path: '/manufacturer/shipments' },
+    { icon: <Activity size={18} />, label: 'IoT Alerts', path: '/manufacturer/iot-alerts' },
+    { icon: <ShieldCheck size={18} />, label: 'Ledger Audit', path: '/manufacturer/ledger-audit' },
   ];
 
   useEffect(() => {
@@ -43,36 +49,16 @@ const Dashboard = () => {
       const token = localStorage.getItem('token') || sessionStorage.getItem('token');
       const authConfig = { headers: { Authorization: `Bearer ${token}` } };
 
-      // STEP 1: Fetch Active Batches (Critical - Isolated)
-      // We do this separately so it works even if other APIs fail
       try {
-        const prodRes = await axios.get('http://localhost:5000/api/manufacturer/production', authConfig);
-        const realBatchCount = Array.isArray(prodRes.data) ? prodRes.data.length : 0;
-        
-        setStats(prev => ({ ...prev, batches: realBatchCount }));
-      } catch (err) {
-        console.error('❌ Error fetching batch count:', err);
-      }
-
-      // STEP 2: Fetch Other Dashboard Widgets
-      try {
-        const [statsRes, shipRes, ledgerRes] = await Promise.all([
-          axios.get('http://localhost:5000/api/dashboard/stats'),
-          axios.get('http://localhost:5000/api/dashboard/shipments'),
-          axios.get('http://localhost:5000/api/dashboard/ledger')
+        const [statsRes, ledgerRes] = await Promise.all([
+          axios.get(`${API_BASE}/dashboard`, authConfig),
+          axios.get(`${API_BASE}/ledger`, authConfig)
         ]);
 
-        setStats(prev => ({
-          ...prev,            // Keep the batch count we just set
-          ...statsRes.data,   // Merge in other stats (units, transit, alerts)
-          batches: prev.batches // FORCE keep the real batch count from Step 1
-        }));
-
-        setShipments(shipRes.data);
-        setLedger(ledgerRes.data);
+        setStats(statsRes.data);
+        setRecentTransactions(ledgerRes.data.transactions?.slice(0, 5) || []);
       } catch (err) {
-        // If shipments fail (Error 500), we just log it, but the dashboard still loads!
-        console.error('⚠️ Warning: Some dashboard widgets failed to load:', err);
+        console.error('Error fetching dashboard data:', err);
       } finally {
         setLoading(false);
       }
@@ -96,37 +82,45 @@ const Dashboard = () => {
     <Layout user={user} menuItems={manufacturerMenuItems}>
       <div className="p-8 space-y-8">
         <div className="grid grid-cols-4 gap-3 md:gap-6">
-          {/* Active Batches now comes from the database even if other APIs fail */}
-          <StatCard title="Active Batches" value={stats.batches} icon={<Box />} />
-          <StatCard title="Units Verified" value={stats.units} icon={<ShieldCheck />} />
-          <StatCard title="In Transit" value={stats.transit} icon={<Truck />} />
-          <StatCard title="High Alerts" value={stats.alerts} icon={<Bell />} alert />
+          <StatCard title="Total Products" value={stats.total_products} icon={<Box />} />
+          <StatCard title="Active Batches" value={stats.active_batches} icon={<Package />} />
+          <StatCard title="Pending Orders" value={stats.pending_orders} icon={<ClipboardList />} alert={stats.pending_orders > 0} />
+          <StatCard title="Total Stock" value={stats.total_stock} icon={<ShieldCheck />} />
         </div>
 
         <div className="grid grid-cols-1 xl:grid-cols-3 gap-8">
           <div className="xl:col-span-2 bg-white rounded-2xl shadow-sm border">
             <div className="p-6 border-b flex justify-between">
-              <h3 className="font-black">Active Shipments</h3>
+              <h3 className="font-black">Recent Transactions</h3>
             </div>
 
             <table className="w-full text-sm">
               <thead className="text-xs text-slate-400 uppercase bg-slate-50">
                 <tr>
-                  <th className="px-6 py-4">ID</th>
-                  <th className="px-6 py-4">Batch</th>
-                  <th className="px-6 py-4">Destination</th>
-                  <th className="px-6 py-4 text-center">Temp</th>
-                  <th className="px-6 py-4">Status</th>
+                  <th className="px-6 py-4 text-left">Product</th>
+                  <th className="px-6 py-4 text-left">Batch</th>
+                  <th className="px-6 py-4 text-left">Action</th>
+                  <th className="px-6 py-4 text-left">Time</th>
                 </tr>
               </thead>
               <tbody>
-                {shipments.length ? shipments.map((s, i) => (
-                  <TableRow key={i} {...s} />
+                {recentTransactions.length ? recentTransactions.map((tx, i) => (
+                  <tr key={i} className="border-t hover:bg-slate-50">
+                    <td className="px-6 py-4 font-bold">{tx.product_name}</td>
+                    <td className="px-6 py-4 text-slate-500 text-xs">{tx.batch_number}</td>
+                    <td className="px-6 py-4">
+                      <span className="px-3 py-1 text-xs font-bold rounded bg-emerald-100 text-emerald-600">
+                        {tx.action}
+                      </span>
+                    </td>
+                    <td className="px-6 py-4 text-xs text-slate-400">
+                      {new Date(tx.created_at).toLocaleString()}
+                    </td>
+                  </tr>
                 )) : (
                   <tr>
-                    <td colSpan="5" className="text-center py-10 text-slate-400">
-                      {/* Friendly message if API fails */}
-                      No active shipments (or failed to load)
+                    <td colSpan="4" className="text-center py-10 text-slate-400">
+                      No recent transactions
                     </td>
                   </tr>
                 )}
@@ -135,22 +129,41 @@ const Dashboard = () => {
           </div>
 
           <div className="space-y-6">
-            <div className="bg-white rounded-2xl shadow-sm border p-6 text-center">
-              <h4 className="font-black mb-6 flex justify-center gap-2">
-                <Thermometer className="text-orange-500" size={18} />
-                Cold Chain
-              </h4>
-              <p className="text-4xl font-black">4.2°C</p>
-              <p className="text-xs text-slate-400 mt-2">Safe Range: 2–8°C</p>
+            <div className="bg-white rounded-2xl shadow-sm border p-6">
+              <h4 className="font-black mb-4">Quick Actions</h4>
+              <div className="space-y-3">
+                <button 
+                  onClick={() => navigate('/manufacturer/products')}
+                  className="w-full text-left px-4 py-3 bg-slate-50 hover:bg-emerald-50 rounded-lg text-sm font-semibold flex items-center gap-3"
+                >
+                  <Box size={16} className="text-emerald-500" /> Add New Product
+                </button>
+                <button 
+                  onClick={() => navigate('/manufacturer/production')}
+                  className="w-full text-left px-4 py-3 bg-slate-50 hover:bg-emerald-50 rounded-lg text-sm font-semibold flex items-center gap-3"
+                >
+                  <Package size={16} className="text-emerald-500" /> Create Batch
+                </button>
+                <button 
+                  onClick={() => navigate('/manufacturer/orders')}
+                  className="w-full text-left px-4 py-3 bg-slate-50 hover:bg-emerald-50 rounded-lg text-sm font-semibold flex items-center gap-3"
+                >
+                  <ClipboardList size={16} className="text-emerald-500" /> View Orders
+                </button>
+              </div>
             </div>
 
             <div className="bg-white rounded-2xl shadow-sm border p-6">
-              <h4 className="font-black mb-4">Audit Ledger</h4>
+              <h4 className="font-black mb-4 flex items-center gap-2">
+                <ShieldCheck className="text-emerald-500" size={18} />
+                Audit Ledger
+              </h4>
               <div className="space-y-4">
-                {ledger.length ? ledger.map((l, i) => (
-                  <LedgerItem key={i} {...l} />
-                )) : (
-                  <p className="text-xs text-slate-400 italic">Awaiting transactions...</p>
+                {recentTransactions.slice(0, 3).map((tx, i) => (
+                  <LedgerItem key={i} tx={tx} />
+                ))}
+                {recentTransactions.length === 0 && (
+                  <p className="text-xs text-slate-400 italic">No transactions yet...</p>
                 )}
               </div>
             </div>
@@ -174,25 +187,11 @@ const StatCard = ({ title, value, icon, alert }) => (
   </div>
 );
 
-const TableRow = ({ id, batch, dest, temp, status }) => (
-  <tr className="border-t hover:bg-slate-50">
-    <td className="px-6 py-4 font-bold">{id}</td>
-    <td className="px-6 py-4 text-slate-500">{batch}</td>
-    <td className="px-6 py-4 text-xs text-slate-400">{dest}</td>
-    <td className="px-6 py-4 text-center">
-      <span className="px-3 py-1 text-xs font-bold rounded bg-emerald-100 text-emerald-600">
-        {temp}°C
-      </span>
-    </td>
-    <td className="px-6 py-4 text-xs font-bold uppercase">{status}</td>
-  </tr>
-);
-
-const LedgerItem = ({ title, time, hash }) => (
+const LedgerItem = ({ tx }) => (
   <div className="text-xs border-l-2 border-emerald-500 pl-4">
-    <p className="font-bold">{title}</p>
-    <p className="text-slate-400">{new Date(time).toLocaleTimeString()}</p>
-    <p className="font-mono text-[10px] truncate text-slate-300">{hash}</p>
+    <p className="font-bold">{tx.action} - {tx.product_name}</p>
+    <p className="text-slate-400">{new Date(tx.created_at).toLocaleTimeString()}</p>
+    <p className="font-mono text-[10px] truncate text-slate-300">{tx.current_hash}</p>
   </div>
 );
 
