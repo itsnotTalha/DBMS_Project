@@ -46,6 +46,8 @@ const Shipments = () => {
   }, [navigate]);
 
   const handleConfirmDelivery = async (shipmentId) => {
+    console.log('[Shipments] handleConfirmDelivery called with shipmentId:', shipmentId);
+    
     if (!window.confirm('Confirm that you have received this shipment? This will add items to your inventory.')) {
       return;
     }
@@ -53,14 +55,19 @@ const Shipments = () => {
     try {
       setProcessingId(shipmentId);
       const token = localStorage.getItem('token') || sessionStorage.getItem('token');
-      await axios.post(
+      console.log('[Shipments] Calling API:', `${API_BASE}/shipments/${shipmentId}/confirm`);
+      
+      const response = await axios.post(
         `${API_BASE}/shipments/${shipmentId}/confirm`,
         {},
         { headers: { Authorization: `Bearer ${token}` } }
       );
+      console.log('[Shipments] API response:', response.data);
+      
       alert('Delivery confirmed! Items have been added to your inventory.');
       fetchShipments();
     } catch (err) {
+      console.error('[Shipments] Error:', err.response?.data || err.message);
       alert('Error confirming delivery: ' + (err.response?.data?.error || err.message));
     } finally {
       setProcessingId(null);

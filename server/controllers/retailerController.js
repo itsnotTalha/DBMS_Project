@@ -379,18 +379,25 @@ export const getIncomingShipments = async (req, res) => {
 // CONFIRM SHIPMENT DELIVERY (B2B Order - Transactional)
 // ============================================
 export const confirmShipmentDelivery = async (req, res) => {
+  console.log('[confirmShipmentDelivery] Called with params:', req.params);
+  console.log('[confirmShipmentDelivery] User:', req.user);
+  
   const connection = await db.getConnection();
   try {
     await connection.beginTransaction();
 
     const { deliveryId } = req.params; // This is actually b2b_order_id for B2B shipments
     const retailerId = req.user.id;
+    
+    console.log('[confirmShipmentDelivery] deliveryId:', deliveryId, 'retailerId:', retailerId);
 
     // Get B2B order details
     const [[order]] = await connection.query(
       `SELECT * FROM B2B_Orders WHERE b2b_order_id = ? AND retailer_id = ?`,
       [deliveryId, retailerId]
     );
+    
+    console.log('[confirmShipmentDelivery] Order found:', order);
 
     if (!order) {
       throw new Error('Order not found or unauthorized');
@@ -416,37 +423,56 @@ export const confirmShipmentDelivery = async (req, res) => {
       [deliveryId]
     );
 
-    const [[outlet]] = await connection.query(
+    console.log('[confirmShipmentDelivery] Order items:', orderItems);
+
+    let [[outlet]] = await connection.query(
       'SELECT outlet_id FROM Retailer_Outlets WHERE retailer_id = ? LIMIT 1',
       [retailerId]
     );
 
-    if (outlet) {
-      for (const item of orderItems) {
-        // Check if inventory record exists
-        const [[existingInventory]] = await connection.query(
-          'SELECT inventory_id FROM Inventory WHERE outlet_id = ? AND product_def_id = ?',
-          [outlet.outlet_id, item.product_def_id]
-        );
+    console.log('[confirmShipmentDelivery] Existing outlet:', outlet);
 
-        if (existingInventory) {
-          // Update existing inventory
-          await connection.query(
-            `UPDATE Inventory 
-             SET quantity_on_hand = quantity_on_hand + ?
-             WHERE outlet_id = ? AND product_def_id = ?`,
-            [item.quantity, outlet.outlet_id, item.product_def_id]
-          );
-        } else {
-          // Create new inventory record
-          await connection.query(
-            `INSERT INTO Inventory (outlet_id, product_def_id, quantity_on_hand)
-             VALUES (?, ?, ?)`,
-            [outlet.outlet_id, item.product_def_id, item.quantity]
-          );
-        }
+    // If no outlet exists, create a default one
+    if (!outlet) {
+      console.log('[confirmShipmentDelivery] Creating default outlet for retailer:', retailerId);
+      const [outletResult] = await connection.query(
+        `INSERT INTO Retailer_Outlets (retailer_id, location_name, address, is_active)
+         VALUES (?, 'Main Outlet', 'Default Address', TRUE)`,
+        [retailerId]
+      );
+      outlet = { outlet_id: outletResult.insertId };
+      console.log('[confirmShipmentDelivery] Created outlet:', outlet);
+    }
+
+    for (const item of orderItems) {
+      console.log('[confirmShipmentDelivery] Processing item:', item);
+      // Check if inventory record exists
+      const [[existingInventory]] = await connection.query(
+        'SELECT inventory_id FROM Inventory WHERE outlet_id = ? AND product_def_id = ?',
+        [outlet.outlet_id, item.product_def_id]
+      );
+
+      if (existingInventory) {
+        // Update existing inventory
+        console.log('[confirmShipmentDelivery] Updating existing inventory:', existingInventory.inventory_id);
+        await connection.query(
+          `UPDATE Inventory 
+           SET quantity_on_hand = quantity_on_hand + ?
+           WHERE outlet_id = ? AND product_def_id = ?`,
+          [item.quantity, outlet.outlet_id, item.product_def_id]
+        );
+      } else {
+        // Create new inventory record
+        console.log('[confirmShipmentDelivery] Creating new inventory record');
+        await connection.query(
+          `INSERT INTO Inventory (outlet_id, product_def_id, quantity_on_hand)
+           VALUES (?, ?, ?)`,
+          [outlet.outlet_id, item.product_def_id, item.quantity]
+        );
       }
     }
+
+    console.log('[confirmShipmentDelivery] Inventory updated successfully');
 
     // Log transaction
     await connection.query(
