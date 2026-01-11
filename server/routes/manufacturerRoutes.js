@@ -8,6 +8,7 @@ import {
     getOrders,
     acceptOrder,
     rejectOrder,
+    shipOrder,
     getShipments,
     getAlerts,
     getLedger
@@ -35,6 +36,7 @@ router.post('/production', createProduction);
 router.get('/orders', getOrders);
 router.post('/orders/:id/accept', acceptOrder);
 router.post('/orders/:id/reject', rejectOrder);
+router.post('/orders/:id/ship', shipOrder);
 
 // Shipments
 router.get('/shipments', getShipments);

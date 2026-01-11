@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import Layout from '../Layout';
-import { Briefcase, Search, Filter, Check, X } from 'lucide-react';
+import { Briefcase, Search, Filter, Check, X, Package } from 'lucide-react';
 import { manufacturerMenuItems } from './menu';
 
 const getStatusClasses = (status) => {
@@ -93,7 +93,7 @@ const Orders = () => {
           return;
         }
       } else {
-        alert('Order accepted! Stock has been deducted from inventory.');
+        alert('Order shipped! Stock has been deducted and retailer can now confirm delivery.');
       }
       
       setShowModal(false);
@@ -120,6 +120,26 @@ const Orders = () => {
         fetchOrders();
       } catch (err) {
         alert('Error rejecting order: ' + (err.response?.data?.error || err.message));
+      } finally {
+        setProcessingOrderId(null);
+      }
+    }
+  };
+
+  const handleShipOrder = async (orderId) => {
+    if (window.confirm('Mark this order as shipped? The retailer will be able to confirm delivery.')) {
+      try {
+        setProcessingOrderId(orderId);
+        const token = localStorage.getItem('token') || sessionStorage.getItem('token');
+        await axios.post(
+          `http://localhost:5000/api/manufacturer/orders/${orderId}/ship`,
+          {},
+          { headers: { Authorization: `Bearer ${token}` } }
+        );
+        alert('Order marked as shipped!');
+        fetchOrders();
+      } catch (err) {
+        alert('Error shipping order: ' + (err.response?.data?.error || err.message));
       } finally {
         setProcessingOrderId(null);
       }
@@ -225,8 +245,16 @@ const Orders = () => {
                               <X size={14} /> Reject
                             </button>
                           </div>
+                        ) : order.status?.toLowerCase() === 'approved' ? (
+                          <button
+                            onClick={() => handleShipOrder(order.b2b_order_id)}
+                            disabled={processingOrderId === order.b2b_order_id}
+                            className="text-blue-500 hover:text-blue-600 font-semibold text-xs flex items-center gap-1 disabled:opacity-50"
+                          >
+                            <Package size={14} /> Ship Order
+                          </button>
                         ) : (
-                          <span className="text-xs text-slate-400">No action</span>
+                          <span className="text-xs text-slate-400">{order.status}</span>
                         )}
                       </td>
                     </tr>

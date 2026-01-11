@@ -292,9 +292,10 @@ export const acceptOrder = async (req, res) => {
                 );
             }
 
+            // Direct delivery - mark as Shipped immediately
             await connection.query(
                 'UPDATE B2B_Orders SET status = ? WHERE b2b_order_id = ?',
-                ['Approved', order_id]
+                ['Shipped', order_id]
             );
         } else if (fulfillment_type === 'production') {
             // Create production batches for each item
@@ -343,6 +344,37 @@ export const rejectOrder = async (req, res) => {
         res.json({ message: 'Order rejected successfully' });
     } catch (error) {
         console.error('Error rejecting order:', error);
+        res.status(500).json({ error: error.message });
+    }
+};
+
+export const shipOrder = async (req, res) => {
+    const order_id = req.params.id;
+
+    try {
+        // Get the order
+        const [[order]] = await db.query(
+            'SELECT * FROM B2B_Orders WHERE b2b_order_id = ? AND manufacturer_id = ?',
+            [order_id, req.user.id]
+        );
+
+        if (!order) {
+            return res.status(404).json({ error: 'Order not found' });
+        }
+
+        if (order.status !== 'Approved') {
+            return res.status(400).json({ error: 'Order must be in Approved status to ship' });
+        }
+
+        // Update to Shipped
+        await db.query(
+            'UPDATE B2B_Orders SET status = ? WHERE b2b_order_id = ?',
+            ['Shipped', order_id]
+        );
+
+        res.json({ message: 'Order marked as shipped successfully' });
+    } catch (error) {
+        console.error('Error shipping order:', error);
         res.status(500).json({ error: error.message });
     }
 };

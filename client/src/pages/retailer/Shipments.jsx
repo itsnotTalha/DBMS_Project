@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import Layout from '../Layout';
-import { Truck, ArrowDownLeft, ArrowUpRight, Package, Clock, MapPin } from 'lucide-react';
+import { Truck, ArrowDownLeft, ArrowUpRight, Package, Clock, MapPin, CheckCircle } from 'lucide-react';
 import { retailerMenuItems } from './menu';
 
 const API_BASE = 'http://localhost:5000/api/retailer';
@@ -13,6 +13,19 @@ const Shipments = () => {
   const [shipments, setShipments] = useState({ incoming: [], outgoing: [], all: [] });
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState('all');
+  const [processingId, setProcessingId] = useState(null);
+
+  const fetchShipments = async () => {
+    try {
+      const token = localStorage.getItem('token') || sessionStorage.getItem('token');
+      const response = await axios.get(`${API_BASE}/shipments`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      setShipments(response.data);
+    } catch (err) {
+      console.error('Error fetching shipments:', err);
+    }
+  };
 
   useEffect(() => {
     const storedUser = localStorage.getItem('user') || sessionStorage.getItem('user');
@@ -29,23 +42,30 @@ const Shipments = () => {
     }
 
     setUser(parsedUser);
-
-    const fetchShipments = async () => {
-      try {
-        const token = localStorage.getItem('token') || sessionStorage.getItem('token');
-        const response = await axios.get(`${API_BASE}/shipments`, {
-          headers: { Authorization: `Bearer ${token}` }
-        });
-        setShipments(response.data);
-      } catch (err) {
-        console.error('Error fetching shipments:', err);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchShipments();
+    fetchShipments().finally(() => setLoading(false));
   }, [navigate]);
+
+  const handleConfirmDelivery = async (shipmentId) => {
+    if (!window.confirm('Confirm that you have received this shipment? This will add items to your inventory.')) {
+      return;
+    }
+    
+    try {
+      setProcessingId(shipmentId);
+      const token = localStorage.getItem('token') || sessionStorage.getItem('token');
+      await axios.post(
+        `${API_BASE}/shipments/${shipmentId}/confirm`,
+        {},
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+      alert('Delivery confirmed! Items have been added to your inventory.');
+      fetchShipments();
+    } catch (err) {
+      alert('Error confirming delivery: ' + (err.response?.data?.error || err.message));
+    } finally {
+      setProcessingId(null);
+    }
+  };
 
   const getStatusColor = (status) => {
     switch (status?.toLowerCase()) {
@@ -187,6 +207,17 @@ const Shipments = () => {
                         <p className="text-xs text-slate-400 mt-1">
                           ETA: {new Date(shipment.estimated_arrival).toLocaleDateString()}
                         </p>
+                      )}
+                      {/* Confirm Delivery button for shipped incoming orders */}
+                      {shipment.direction === 'incoming' && shipment.status === 'Shipped' && (
+                        <button
+                          onClick={() => handleConfirmDelivery(shipment.shipment_id)}
+                          disabled={processingId === shipment.shipment_id}
+                          className="mt-3 px-4 py-2 bg-green-500 hover:bg-green-600 text-white text-xs font-bold rounded-lg flex items-center gap-2 disabled:opacity-50 ml-auto"
+                        >
+                          <CheckCircle size={14} />
+                          {processingId === shipment.shipment_id ? 'Processing...' : 'Confirm Delivery'}
+                        </button>
                       )}
                     </div>
                   </div>
