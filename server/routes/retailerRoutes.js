@@ -15,6 +15,12 @@ const verifyRetailer = (req, res, next) => {
 };
 
 // ============================================
+// DASHBOARD ROUTES
+// ============================================
+router.get('/dashboard', verifyRetailer, retailerController.getDashboardMetrics);
+router.get('/dashboard/stats', verifyRetailer, retailerController.getDashboardStats);
+
+// ============================================
 // MANUFACTURERS ROUTES
 // ============================================
 router.get('/manufacturers', verifyRetailer, retailerController.getManufacturers);
@@ -35,13 +41,24 @@ router.get('/inventory', verifyRetailer, retailerController.getRetailerInventory
 // ============================================
 // SHIPMENTS/DELIVERIES ROUTES
 // ============================================
-router.get('/shipments', verifyRetailer, retailerController.getIncomingShipments);
+router.get('/shipments', verifyRetailer, retailerController.getShipments);
+router.get('/shipments/incoming', verifyRetailer, retailerController.getIncomingShipments);
 router.post('/shipments/:deliveryId/confirm', verifyRetailer, retailerController.confirmShipmentDelivery);
 
 // ============================================
-// DASHBOARD ROUTES
+// CUSTOMERS ROUTES
 // ============================================
-router.get('/dashboard', verifyRetailer, retailerController.getDashboardMetrics);
+router.get('/customers', verifyRetailer, retailerController.getCustomers);
+
+// ============================================
+// ANALYTICS ROUTES
+// ============================================
+router.get('/analytics', verifyRetailer, retailerController.getAnalytics);
+
+// ============================================
+// ALERTS ROUTES
+// ============================================
+router.get('/alerts', verifyRetailer, retailerController.getAlerts);
 
 // ============================================
 // SEARCH ROUTES

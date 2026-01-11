@@ -200,7 +200,7 @@ const Orders = () => {
 
   if (loading) {
     return (
-      <Layout user={user}>
+      <Layout user={user} menuItems={retailerMenuItems}>
         <div className="p-8 flex items-center justify-center">
           <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-emerald-500"></div>
         </div>
@@ -223,7 +223,7 @@ const Orders = () => {
   };
 
   return (
-    <Layout user={user}>
+    <Layout user={user} menuItems={retailerMenuItems}>
       <div className="p-8">
         <div className="flex justify-between items-center mb-6">
           <h2 className="text-2xl font-black flex items-center gap-2">
@@ -359,16 +359,16 @@ const Orders = () => {
               </thead>
               <tbody className="divide-y divide-slate-200">
                 {orders.map((order) => (
-                  <tr key={order.orderId} className="hover:bg-slate-50">
-                    <td className="px-6 py-4 font-medium">#{order.orderId}</td>
-                    <td className="px-6 py-4 text-slate-600">{order.manufacturerName}</td>
-                    <td className="px-6 py-4 font-medium">${order.total_amount}</td>
+                  <tr key={order.b2b_order_id} className="hover:bg-slate-50">
+                    <td className="px-6 py-4 font-medium">#{order.b2b_order_id}</td>
+                    <td className="px-6 py-4 text-slate-600">{order.company_name}</td>
+                    <td className="px-6 py-4 font-medium">${parseFloat(order.total_amount || 0).toFixed(2)}</td>
                     <td className="px-6 py-4">
                       <span className={`px-2 py-1 text-xs rounded-full ${getStatusClasses(order.status)}`}>
                         {order.status}
                       </span>
                     </td>
-                    <td className="px-6 py-4 text-slate-600">{order.itemCount} items</td>
+                    <td className="px-6 py-4 text-slate-600">{order.items?.length || 0} items</td>
                     <td className="px-6 py-4 text-slate-600">{new Date(order.order_date).toLocaleDateString()}</td>
                   </tr>
                 ))}

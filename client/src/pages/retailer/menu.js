@@ -6,7 +6,8 @@ import {
   BarChart3,
   AlertTriangle,
   Archive,
-  Zap,
+  Users,
+  QrCode,
   Settings,
 } from 'lucide-react';
 
@@ -22,14 +23,19 @@ export const retailerMenuItems = [
     path: '/retailer/orders',
   },
   {
+    icon: React.createElement(Archive, { size: 18 }),
+    label: 'Inventory',
+    path: '/retailer/inventory',
+  },
+  {
     icon: React.createElement(Truck, { size: 18 }),
     label: 'Shipments',
     path: '/retailer/shipments',
   },
   {
-    icon: React.createElement(Archive, { size: 18 }),
-    label: 'Inventory',
-    path: '/retailer/inventory',
+    icon: React.createElement(Users, { size: 18 }),
+    label: 'Customers',
+    path: '/retailer/customers',
   },
   {
     icon: React.createElement(BarChart3, { size: 18 }),
@@ -38,13 +44,13 @@ export const retailerMenuItems = [
   },
   {
     icon: React.createElement(AlertTriangle, { size: 18 }),
-    label: 'Alerts & Recalls',
+    label: 'Alerts',
     path: '/retailer/alerts',
   },
   {
-    icon: React.createElement(Zap, { size: 18 }),
-    label: 'IoT Alerts',
-    path: '/retailer/iot-alerts',
+    icon: React.createElement(QrCode, { size: 18 }),
+    label: 'Verify Product',
+    path: '/retailer/verify',
   },
   {
     icon: React.createElement(Settings, { size: 18 }),

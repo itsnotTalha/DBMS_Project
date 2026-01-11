@@ -18,6 +18,13 @@ import ManufacturerOrders from './pages/manufacturer/Orders';
 // Retailer Pages
 import RetailerDashboard from './pages/retailer/Dashboard';
 import RetailerOrders from './pages/retailer/Orders';
+import RetailerInventory from './pages/retailer/Inventory';
+import RetailerShipments from './pages/retailer/Shipments';
+import RetailerCustomers from './pages/retailer/Customers';
+import RetailerAnalytics from './pages/retailer/Analytics';
+import RetailerAlerts from './pages/retailer/Alerts';
+import RetailerVerifyProduct from './pages/retailer/VerifyProduct';
+import RetailerSettings from './pages/retailer/Settings';
 
 // Customer Pages
 import CustomerDashboard from './pages/customer/Dashboard';
@@ -72,6 +79,13 @@ function App() {
         {/* Retailer Routes */}
         <Route path="/retailer/dashboard" element={<RetailerDashboard />} />
         <Route path="/retailer/orders" element={<RetailerOrders />} />
+        <Route path="/retailer/inventory" element={<RetailerInventory />} />
+        <Route path="/retailer/shipments" element={<RetailerShipments />} />
+        <Route path="/retailer/customers" element={<RetailerCustomers />} />
+        <Route path="/retailer/analytics" element={<RetailerAnalytics />} />
+        <Route path="/retailer/alerts" element={<RetailerAlerts />} />
+        <Route path="/retailer/verify" element={<RetailerVerifyProduct />} />
+        <Route path="/retailer/settings" element={<RetailerSettings />} />
 
         {/* Customer Routes */}
         <Route path="/customer/dashboard" element={<CustomerDashboard />} />
