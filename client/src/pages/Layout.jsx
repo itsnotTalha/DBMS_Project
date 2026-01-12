@@ -214,11 +214,13 @@ const Layout = ({ children, user }) => {
         </div>
       </main>
 
-      {/* Mobile Overlay */}
-          <div
-            className="fixed inset-0 bg-black/50 z-30 lg:hidden"
-            onClick={() => setIsSidebarOpen(false)}
-          />
+      {/* Mobile Overlay - only show when sidebar is open on mobile */}
+      {isSidebarOpen && (
+        <div
+          className="fixed inset-0 bg-black/50 z-30 lg:hidden"
+          onClick={() => setIsSidebarOpen(false)}
+        />
+      )}
     </div>
   );
 };
