@@ -270,7 +270,7 @@ const LandingPage = () => {
                   type="text"
                   value={verifyCode}
                   onChange={(e) => setVerifyCode(e.target.value)}
-                  placeholder="Enter product serial code to verify authenticity..."
+                  placeholder="Enter batch or serial code (e.g., BATCH-20260112-1234)"
                   className="w-full pl-12 pr-4 py-4 rounded-xl text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-4 focus:ring-white/30"
                   onKeyDown={(e) => e.key === 'Enter' && handleVerify()}
                 />

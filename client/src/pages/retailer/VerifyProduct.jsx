@@ -82,7 +82,7 @@ const VerifyProduct = () => {
                   type="text"
                   value={serialCode}
                   onChange={(e) => setSerialCode(e.target.value)}
-                  placeholder="Enter product serial code (e.g., BATCH-001-0001)"
+                  placeholder="Enter batch or serial code (e.g., BATCH-20260112-1234 or BATCH-20260112-1234-0001)"
                   className="w-full pl-12 pr-4 py-4 bg-slate-50 border rounded-xl text-lg outline-none focus:ring-2 focus:ring-blue-500"
                 />
               </div>
@@ -103,6 +103,9 @@ const VerifyProduct = () => {
               <div>
                 <h3 className="font-bold text-red-800">Verification Failed</h3>
                 <p className="text-red-600 mt-1">{error}</p>
+                {result?.hint && (
+                  <p className="text-sm text-slate-500 mt-2">Hint: {result.hint}</p>
+                )}
               </div>
             </div>
           )}
@@ -113,25 +116,63 @@ const VerifyProduct = () => {
               {/* Verification Status */}
               <div className={`rounded-2xl p-6 flex items-center gap-4 ${
                 result.verified 
-                  ? 'bg-gradient-to-r from-green-50 to-emerald-50 border border-green-200' 
+                  ? result.is_batch
+                    ? 'bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200'
+                    : 'bg-gradient-to-r from-green-50 to-emerald-50 border border-green-200' 
                   : 'bg-gradient-to-r from-red-50 to-orange-50 border border-red-200'
               }`}>
                 {result.verified ? (
-                  <ShieldCheck size={48} className="text-green-500" />
+                  result.is_batch ? (
+                    <Package size={48} className="text-blue-500" />
+                  ) : (
+                    <ShieldCheck size={48} className="text-green-500" />
+                  )
                 ) : (
                   <ShieldX size={48} className="text-red-500" />
                 )}
-                <div>
-                  <h3 className={`text-2xl font-black ${result.verified ? 'text-green-700' : 'text-red-700'}`}>
-                    {result.verified ? 'Authentic Product' : 'Verification Failed'}
-                  </h3>
-                  <p className={result.verified ? 'text-green-600' : 'text-red-600'}>
+                <div className="flex-1">
+                  <h3 className={`text-2xl font-black ${
+                    result.verified 
+                      ? result.is_batch ? 'text-blue-700' : 'text-green-700' 
+                      : 'text-red-700'
+                  }`}>
                     {result.verified 
-                      ? 'This product is verified as genuine' 
+                      ? result.is_batch ? 'Batch Verified' : 'Authentic Product' 
+                      : 'Verification Failed'}
+                  </h3>
+                  <p className={result.verified ? (result.is_batch ? 'text-blue-600' : 'text-green-600') : 'text-red-600'}>
+                    {result.verified 
+                      ? result.message || 'This product is verified as genuine' 
                       : result.warning || 'This product could not be verified'}
                   </p>
                 </div>
               </div>
+
+              {/* Batch Info Summary */}
+              {result.is_batch && result.product && (
+                <div className="bg-white rounded-2xl border shadow-sm p-6">
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                    <div className="text-center p-4 bg-blue-50 rounded-xl">
+                      <p className="text-2xl font-black text-blue-700">{result.product.total_items}</p>
+                      <p className="text-xs text-blue-600">Total Items</p>
+                    </div>
+                    <div className="text-center p-4 bg-green-50 rounded-xl">
+                      <p className="text-2xl font-black text-green-700">{result.product.in_inventory_count || 0}</p>
+                      <p className="text-xs text-green-600">In Inventory</p>
+                    </div>
+                    <div className="text-center p-4 bg-slate-50 rounded-xl">
+                      <p className={`text-sm font-black ${result.product.batch_status === 'Active' ? 'text-green-600' : 'text-slate-600'}`}>
+                        {result.product.batch_status}
+                      </p>
+                      <p className="text-xs text-slate-500">Batch Status</p>
+                    </div>
+                    <div className="text-center p-4 bg-slate-50 rounded-xl">
+                      <p className="text-sm font-mono font-bold text-slate-700 truncate">{result.product.sample_serial || 'N/A'}</p>
+                      <p className="text-xs text-slate-500">Sample Serial</p>
+                    </div>
+                  </div>
+                </div>
+              )}
 
               {/* Warning */}
               {result.warning && (
