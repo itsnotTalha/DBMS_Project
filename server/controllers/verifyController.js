@@ -12,8 +12,10 @@ export const verifyProduct = async (req, res) => {
       return res.status(400).json({ verified: false, error: 'Serial code is required' });
     }
 
-    // Get product item with all related data
-    const [[productItem]] = await db.query(
+    const code = serial_code.trim();
+
+    // First, try to find as a serial code (exact match)
+    let [[productItem]] = await db.query(
       `SELECT 
         pi.item_id, pi.serial_code, pi.authentication_hash, pi.status, pi.created_at,
         b.batch_id, b.batch_number, b.manufacturing_date, b.expiry_date, b.status as batch_status,
@@ -25,20 +27,104 @@ export const verifyProduct = async (req, res) => {
        JOIN Product_Definitions pd ON b.product_def_id = pd.product_def_id
        JOIN Manufacturers m ON pd.manufacturer_id = m.manufacturer_id
        WHERE pi.serial_code = ?`,
-      [serial_code]
+      [code]
     );
+
+    // If not found as serial code, try to find as batch number
+    if (!productItem) {
+      const [[batchInfo]] = await db.query(
+        `SELECT 
+          b.batch_id, b.batch_number, b.manufacturing_date, b.expiry_date, b.status as batch_status,
+          pd.product_def_id, pd.name as product_name, pd.description, pd.category, 
+          pd.base_price, pd.image_url,
+          m.manufacturer_id, m.company_name as manufacturer_name, m.license_number,
+          (SELECT COUNT(*) FROM Product_Items WHERE batch_id = b.batch_id) as total_items,
+          (SELECT COUNT(*) FROM Product_Items WHERE batch_id = b.batch_id AND status = 'In_Inventory') as in_inventory_count,
+          (SELECT pi.serial_code FROM Product_Items pi WHERE pi.batch_id = b.batch_id LIMIT 1) as sample_serial
+         FROM Batches b
+         JOIN Product_Definitions pd ON b.product_def_id = pd.product_def_id
+         JOIN Manufacturers m ON pd.manufacturer_id = m.manufacturer_id
+         WHERE b.batch_number = ?`,
+        [code]
+      );
+
+      if (batchInfo) {
+        // Found as batch number - return batch info
+        const isExpired = new Date(batchInfo.expiry_date) < new Date();
+
+        // Log batch scan
+        await db.query(
+          `INSERT INTO QR_Scan_Logs (serial_code, scan_result) VALUES (?, 'Valid')`,
+          [code]
+        ).catch(() => {});
+
+        // Get current retailer for this product
+        let current_retailer = null;
+        const [[inventoryInfo]] = await db.query(
+          `SELECT r.business_name, r.retailer_id, ro.location_name, ro.address,
+                  i.quantity_on_hand
+           FROM Inventory i
+           JOIN Retailer_Outlets ro ON i.outlet_id = ro.outlet_id
+           JOIN Retailers r ON ro.retailer_id = r.retailer_id
+           WHERE i.product_def_id = ? AND i.quantity_on_hand > 0
+           LIMIT 1`,
+          [batchInfo.product_def_id]
+        );
+
+        if (inventoryInfo) {
+          current_retailer = {
+            name: inventoryInfo.business_name,
+            location: inventoryInfo.location_name,
+            address: inventoryInfo.address,
+            quantity: inventoryInfo.quantity_on_hand
+          };
+        }
+
+        return res.json({
+          verified: true,
+          is_batch: true,
+          warning: isExpired ? 'This batch has expired' : null,
+          product: {
+            batch_number: batchInfo.batch_number,
+            product_name: batchInfo.product_name,
+            description: batchInfo.description,
+            category: batchInfo.category,
+            image_url: batchInfo.image_url,
+            base_price: batchInfo.base_price,
+            batch_status: batchInfo.batch_status,
+            manufacturing_date: batchInfo.manufacturing_date,
+            expiry_date: batchInfo.expiry_date,
+            total_items: batchInfo.total_items,
+            in_inventory_count: batchInfo.in_inventory_count,
+            sample_serial: batchInfo.sample_serial,
+            is_expired: isExpired
+          },
+          manufacturer: {
+            name: batchInfo.manufacturer_name,
+            license_number: batchInfo.license_number
+          },
+          current_retailer,
+          recall: null,
+          blockchain_history: [],
+          scan_history: [],
+          verification_timestamp: new Date().toISOString(),
+          message: `This is a valid batch containing ${batchInfo.total_items} items (${batchInfo.in_inventory_count} in inventory). For individual item verification, use the full serial code (e.g., ${batchInfo.sample_serial || batchInfo.batch_number + '-0001'}).`
+        });
+      }
+    }
 
     if (!productItem) {
       // Log failed scan attempt
       await db.query(
         `INSERT INTO QR_Scan_Logs (serial_code, scan_result) VALUES (?, 'Fake')`,
-        [serial_code]
+        [code]
       ).catch(() => {}); // Ignore if foreign key fails
 
       return res.json({
         verified: false,
-        error: 'Product not found in database',
-        serial_code
+        error: 'Product not found in database. Please check the code and try again.',
+        serial_code: code,
+        hint: 'Serial codes typically look like: BATCH-YYYYMMDD-XXXX-0001, or use just the batch number: BATCH-YYYYMMDD-XXXX'
       });
     }
 
