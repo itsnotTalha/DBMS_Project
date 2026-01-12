@@ -314,6 +314,7 @@ export const getCustomerReports = async (req, res) => {
 
 // ------------------------------------------------------------------
 // PLACE CUSTOMER ORDER
+// Order starts as 'Processing' - stock is NOT deducted until customer confirms receipt
 // ------------------------------------------------------------------
 export const placeOrder = async (req, res) => {
   const connection = await db.getConnection();
@@ -328,27 +329,30 @@ export const placeOrder = async (req, res) => {
       throw new Error('Outlet and items are required');
     }
 
-    // Calculate total and validate stock
+    // Calculate total and validate inventory stock
     let totalAmount = 0;
     for (const item of items) {
-      // Check stock availability
-      const [products] = await connection.query(
-        'SELECT current_stock, base_price FROM Product_Definitions WHERE product_def_id = ? AND is_active = TRUE',
-        [item.product_def_id]
+      // Check inventory availability at the outlet
+      const [inventory] = await connection.query(
+        `SELECT i.quantity_on_hand, pd.base_price, pd.name 
+         FROM Inventory i
+         JOIN Product_Definitions pd ON i.product_def_id = pd.product_def_id
+         WHERE i.outlet_id = ? AND i.product_def_id = ? AND pd.is_active = TRUE`,
+        [outlet_id, item.product_def_id]
       );
 
-      if (products.length === 0) {
-        throw new Error(`Product ${item.product_def_id} not found`);
+      if (inventory.length === 0) {
+        throw new Error(`Product ${item.product_def_id} not available at this outlet`);
       }
 
-      if (products[0].current_stock < item.quantity) {
-        throw new Error(`Insufficient stock for product ${item.product_def_id}`);
+      if (inventory[0].quantity_on_hand < item.quantity) {
+        throw new Error(`Insufficient stock for ${inventory[0].name}. Available: ${inventory[0].quantity_on_hand}`);
       }
 
       totalAmount += item.unit_price * item.quantity;
     }
 
-    // Create the order
+    // Create the order with 'Processing' status
     const [orderResult] = await connection.query(
       `INSERT INTO Customer_Orders (customer_id, outlet_id, total_amount, payment_method, status) 
        VALUES (?, ?, ?, ?, 'Processing')`,
@@ -357,47 +361,98 @@ export const placeOrder = async (req, res) => {
 
     const orderId = orderResult.insertId;
 
-    // Create order items and update stock
+    // Create order items (stock NOT deducted yet - only when customer confirms receipt)
     for (const item of items) {
       await connection.query(
         `INSERT INTO Order_Items (order_id, product_def_id, quantity, unit_price) 
          VALUES (?, ?, ?, ?)`,
         [orderId, item.product_def_id, item.quantity, item.unit_price]
       );
-
-      // Update stock
-      await connection.query(
-        'UPDATE Product_Definitions SET current_stock = current_stock - ? WHERE product_def_id = ?',
-        [item.quantity, item.product_def_id]
-      );
     }
-
-    // Create delivery record
-    const trackingNumber = `TRK-${Date.now()}-${orderId}`;
-    const estimatedArrival = new Date();
-    estimatedArrival.setDate(estimatedArrival.getDate() + 5); // 5 days delivery
-
-    await connection.query(
-      `INSERT INTO Deliveries (order_id, tracking_number, current_location, estimated_arrival, status) 
-       VALUES (?, ?, ?, ?, 'Dispatched')`,
-      [orderId, trackingNumber, shipping_address || 'Processing Center', estimatedArrival]
-    );
 
     await connection.commit();
 
     res.status(201).json({
-      message: 'Order placed successfully',
+      message: 'Order placed successfully.',
       order: {
         order_id: orderId,
-        tracking_number: trackingNumber,
         total_amount: totalAmount,
-        estimated_arrival: estimatedArrival
+        status: 'Processing'
       }
     });
 
   } catch (error) {
     await connection.rollback();
     console.error('Place order error:', error);
+    res.status(400).json({ error: error.message });
+  } finally {
+    connection.release();
+  }
+};
+
+// ------------------------------------------------------------------
+// CONFIRM ORDER RECEIVED
+// Customer confirms receipt - this triggers stock deduction
+// ------------------------------------------------------------------
+export const confirmOrderReceived = async (req, res) => {
+  const connection = await db.getConnection();
+  
+  try {
+    await connection.beginTransaction();
+
+    const customerId = req.user.id;
+    const { orderId } = req.params;
+
+    // Verify order belongs to customer and is Out_for_Delivery
+    const [[order]] = await connection.query(`
+      SELECT order_id, status, outlet_id
+      FROM Customer_Orders
+      WHERE order_id = ? AND customer_id = ?
+    `, [orderId, customerId]);
+
+    if (!order) {
+      throw new Error('Order not found');
+    }
+
+    if (order.status !== 'Out_for_Delivery') {
+      throw new Error(`Cannot confirm receipt for order with status: ${order.status}`);
+    }
+
+    // Get order items
+    const [items] = await connection.query(
+      'SELECT product_def_id, quantity FROM Order_Items WHERE order_id = ?',
+      [orderId]
+    );
+
+    // Deduct from retailer inventory
+    for (const item of items) {
+      await connection.query(
+        `UPDATE Inventory 
+         SET quantity_on_hand = quantity_on_hand - ? 
+         WHERE outlet_id = ? AND product_def_id = ?`,
+        [item.quantity, order.outlet_id, item.product_def_id]
+      );
+    }
+
+    // Update order status to Completed
+    await connection.query(
+      'UPDATE Customer_Orders SET status = ? WHERE order_id = ?',
+      ['Completed', orderId]
+    );
+
+    // Update delivery status
+    await connection.query(
+      `UPDATE Deliveries SET status = 'Delivered', delivered_at = NOW() WHERE order_id = ?`,
+      [orderId]
+    );
+
+    await connection.commit();
+
+    res.json({ message: 'Order receipt confirmed. Thank you!', orderId });
+
+  } catch (error) {
+    await connection.rollback();
+    console.error('Confirm order received error:', error);
     res.status(400).json({ error: error.message });
   } finally {
     connection.release();

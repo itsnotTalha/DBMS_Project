@@ -61,6 +61,13 @@ router.get('/analytics', verifyRetailer, retailerController.getAnalytics);
 router.get('/alerts', verifyRetailer, retailerController.getAlerts);
 
 // ============================================
+// CUSTOMER ORDERS MANAGEMENT ROUTES
+// ============================================
+router.get('/customer-orders', verifyRetailer, retailerController.getCustomerOrdersForRetailer);
+router.put('/customer-orders/:orderId/accept', verifyRetailer, retailerController.acceptCustomerOrder);
+router.put('/customer-orders/:orderId/ship', verifyRetailer, retailerController.shipCustomerOrder);
+
+// ============================================
 // SEARCH ROUTES
 // ============================================
 router.get('/search/products', verifyRetailer, retailerController.searchProducts);

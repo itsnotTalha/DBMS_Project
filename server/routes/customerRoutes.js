@@ -9,7 +9,8 @@ import {
   getVerificationHistory,
   verifyProductAuthenticated,
   submitReport,
-  getCustomerReports
+  getCustomerReports,
+  confirmOrderReceived
 } from '../controllers/customerController.js';
 
 const router = express.Router();
@@ -24,6 +25,7 @@ router.get('/orders/current', getCurrentOrders);
 // Orders
 router.post('/orders', placeOrder);
 router.get('/orders', getCustomerOrders);
+router.put('/orders/:orderId/confirm-received', confirmOrderReceived);
 
 // Verification
 router.get('/verifications', getVerificationHistory);

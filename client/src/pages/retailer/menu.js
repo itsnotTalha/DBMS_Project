@@ -2,6 +2,7 @@ import React from 'react';
 import {
   LayoutDashboard,
   ShoppingCart,
+  ShoppingBag,
   Truck,
   BarChart3,
   AlertTriangle,
@@ -18,8 +19,13 @@ export const retailerMenuItems = [
     path: '/retailer/dashboard',
   },
   {
+    icon: React.createElement(ShoppingBag, { size: 18 }),
+    label: 'Customer Orders',
+    path: '/retailer/customer-orders',
+  },
+  {
     icon: React.createElement(ShoppingCart, { size: 18 }),
-    label: 'Orders',
+    label: 'My Orders',
     path: '/retailer/orders',
   },
   {

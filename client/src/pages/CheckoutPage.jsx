@@ -46,14 +46,12 @@ const CheckoutPage = () => {
   // State
   const [user, setUser] = useState(null);
   const [cart, setCart] = useState([]);
-  const [outlets, setOutlets] = useState([]);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [orderSuccess, setOrderSuccess] = useState(null);
   const [error, setError] = useState(null);
   
   // Form state
-  const [selectedOutlet, setSelectedOutlet] = useState('');
   const [shippingAddress, setShippingAddress] = useState('');
   const [paymentMethod, setPaymentMethod] = useState('card');
 
@@ -80,35 +78,28 @@ const CheckoutPage = () => {
       return;
     }
     setCart(JSON.parse(savedCart));
-    
-    // Fetch outlets
-    fetchOutlets();
+    setLoading(false);
   }, [navigate]);
-
-  const fetchOutlets = async () => {
-    try {
-      const response = await axios.get(`${API_BASE}/public/outlets`);
-      setOutlets(response.data.outlets || []);
-      if (response.data.outlets?.length > 0) {
-        setSelectedOutlet(response.data.outlets[0].outlet_id.toString());
-      }
-    } catch (error) {
-      console.error('Error fetching outlets:', error);
-    } finally {
-      setLoading(false);
-    }
-  };
 
   const getToken = () => localStorage.getItem('token') || sessionStorage.getItem('token');
 
   const cartTotal = cart.reduce((sum, item) => sum + (item.price * item.quantity), 0);
+  
+  // Group cart items by outlet for separate orders
+  const cartByOutlet = cart.reduce((acc, item) => {
+    const outletId = item.outlet_id;
+    if (!acc[outletId]) {
+      acc[outletId] = {
+        outlet_id: outletId,
+        retailer: item.retailer,
+        items: []
+      };
+    }
+    acc[outletId].items.push(item);
+    return acc;
+  }, {});
 
   const handlePlaceOrder = async () => {
-    if (!selectedOutlet) {
-      setError('Please select a pickup outlet');
-      return;
-    }
-    
     if (!shippingAddress.trim()) {
       setError('Please enter a shipping address');
       return;
@@ -118,28 +109,35 @@ const CheckoutPage = () => {
     setError(null);
 
     try {
-      const orderData = {
-        outlet_id: parseInt(selectedOutlet),
-        items: cart.map(item => ({
-          product_def_id: item.product_def_id,
-          quantity: item.quantity,
-          unit_price: item.price
-        })),
-        shipping_address: shippingAddress,
-        payment_method: paymentMethod
-      };
+      const orders = [];
+      
+      // Create separate order for each outlet
+      for (const outletGroup of Object.values(cartByOutlet)) {
+        const orderData = {
+          outlet_id: outletGroup.outlet_id,
+          items: outletGroup.items.map(item => ({
+            product_def_id: item.product_def_id,
+            quantity: item.quantity,
+            unit_price: item.price
+          })),
+          shipping_address: shippingAddress,
+          payment_method: paymentMethod
+        };
 
-      const response = await axios.post(
-        `${API_BASE}/customer/orders`,
-        orderData,
-        { headers: { Authorization: `Bearer ${getToken()}` } }
-      );
+        const response = await axios.post(
+          `${API_BASE}/customer/orders`,
+          orderData,
+          { headers: { Authorization: `Bearer ${getToken()}` } }
+        );
+        
+        orders.push(response.data.order);
+      }
 
       // Clear cart
       localStorage.removeItem('shopping_cart');
       
       // Show success
-      setOrderSuccess(response.data.order);
+      setOrderSuccess(orders);
 
     } catch (error) {
       console.error('Order error:', error);
@@ -166,30 +164,34 @@ const CheckoutPage = () => {
             <CheckCircle className="w-10 h-10 text-green-500" />
           </div>
           <h1 className="text-2xl font-bold text-slate-900 mb-2">Order Placed Successfully!</h1>
-          <p className="text-slate-500 mb-6">Thank you for your purchase</p>
+          <p className="text-slate-500 mb-6">
+            {orderSuccess.length > 1 
+              ? `${orderSuccess.length} orders created from different retailers`
+              : 'Awaiting retailer confirmation'}
+          </p>
           
-          <div className="bg-slate-50 rounded-xl p-4 mb-6 text-left">
-            <div className="flex justify-between mb-2">
-              <span className="text-slate-500">Order ID</span>
-              <span className="font-bold">#{orderSuccess.order_id}</span>
-            </div>
-            <div className="flex justify-between mb-2">
-              <span className="text-slate-500">Tracking Number</span>
-              <span className="font-mono text-sm">{orderSuccess.tracking_number}</span>
-            </div>
-            <div className="flex justify-between mb-2">
-              <span className="text-slate-500">Total</span>
-              <span className="font-bold text-emerald-600">${orderSuccess.total_amount.toFixed(2)}</span>
-            </div>
-            <div className="flex justify-between">
-              <span className="text-slate-500">Est. Delivery</span>
-              <span>{new Date(orderSuccess.estimated_arrival).toLocaleDateString()}</span>
-            </div>
+          <div className="bg-slate-50 rounded-xl p-4 mb-6 text-left space-y-3">
+            {orderSuccess.map((order, idx) => (
+              <div key={order.order_id} className={idx > 0 ? 'border-t pt-3' : ''}>
+                <div className="flex justify-between mb-1">
+                  <span className="text-slate-500">Order ID</span>
+                  <span className="font-bold">#{order.order_id}</span>
+                </div>
+                <div className="flex justify-between mb-1">
+                  <span className="text-slate-500">Status</span>
+                  <span className="text-yellow-600 font-medium">{order.status}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-slate-500">Total</span>
+                  <span className="font-bold text-emerald-600">${parseFloat(order.total_amount).toFixed(2)}</span>
+                </div>
+              </div>
+            ))}
           </div>
           
           <div className="space-y-3">
             <Link
-              to="/customer/dashboard"
+              to="/customer/orders"
               className="block w-full bg-emerald-500 hover:bg-emerald-600 text-white py-3 rounded-xl font-semibold"
             >
               View My Orders
@@ -239,53 +241,44 @@ const CheckoutPage = () => {
               </div>
             )}
 
-            {/* Pickup Location */}
+            {/* Orders by Retailer */}
             <div className="bg-white rounded-xl p-6 shadow-sm">
               <h2 className="font-bold text-lg mb-4 flex items-center gap-2">
-                <MapPin className="w-5 h-5 text-emerald-500" />
-                Pickup Location
+                <Package className="w-5 h-5 text-emerald-500" />
+                Items by Retailer
               </h2>
               
-              {outlets.length === 0 ? (
-                <p className="text-slate-500">No outlets available</p>
-              ) : (
-                <div className="space-y-3">
-                  {outlets.map(outlet => (
-                    <label
-                      key={outlet.outlet_id}
-                      className={`block p-4 border rounded-xl cursor-pointer transition ${
-                        selectedOutlet === outlet.outlet_id.toString()
-                          ? 'border-emerald-500 bg-emerald-50'
-                          : 'border-slate-200 hover:border-slate-300'
-                      }`}
-                    >
-                      <input
-                        type="radio"
-                        name="outlet"
-                        value={outlet.outlet_id}
-                        checked={selectedOutlet === outlet.outlet_id.toString()}
-                        onChange={(e) => setSelectedOutlet(e.target.value)}
-                        className="sr-only"
-                      />
-                      <div className="flex items-start gap-3">
-                        <div className={`w-5 h-5 rounded-full border-2 flex-shrink-0 mt-0.5 ${
-                          selectedOutlet === outlet.outlet_id.toString()
-                            ? 'border-emerald-500 bg-emerald-500'
-                            : 'border-slate-300'
-                        }`}>
-                          {selectedOutlet === outlet.outlet_id.toString() && (
-                            <CheckCircle className="w-4 h-4 text-white" />
-                          )}
+              <div className="space-y-4">
+                {Object.values(cartByOutlet).map((group, idx) => (
+                  <div key={group.outlet_id} className={`${idx > 0 ? 'border-t pt-4' : ''}`}>
+                    <p className="font-medium text-slate-900 mb-2">From: {group.retailer}</p>
+                    <div className="space-y-2">
+                      {group.items.map(item => (
+                        <div key={item.inventory_id} className="flex items-center gap-3 text-sm">
+                          <div className="w-10 h-10 bg-slate-100 rounded-lg flex items-center justify-center overflow-hidden">
+                            {item.image_url ? (
+                              <img src={item.image_url} alt="" className="w-full h-full object-cover" />
+                            ) : (
+                              <CategoryIcon category={item.category} size={16} className="text-slate-400" />
+                            )}
+                          </div>
+                          <div className="flex-1">
+                            <p className="font-medium text-slate-900">{item.name}</p>
+                            <p className="text-xs text-slate-500">Qty: {item.quantity}</p>
+                          </div>
+                          <p className="font-medium">${(item.price * item.quantity).toFixed(2)}</p>
                         </div>
-                        <div>
-                          <p className="font-semibold text-slate-900">{outlet.location_name || outlet.retailer_name}</p>
-                          <p className="text-sm text-slate-500">{outlet.address}</p>
-                        </div>
-                      </div>
-                    </label>
-                  ))}
-                </div>
-              )}
+                      ))}
+                    </div>
+                  </div>
+                ))}
+              </div>
+              
+              <p className="text-xs text-slate-500 mt-4">
+                Note: {Object.keys(cartByOutlet).length > 1 
+                  ? 'Items from different retailers will create separate orders' 
+                  : 'All items will be shipped from the same retailer'}
+              </p>
             </div>
 
             {/* Shipping Address */}

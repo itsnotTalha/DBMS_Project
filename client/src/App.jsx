@@ -18,6 +18,7 @@ import ManufacturerOrders from './pages/manufacturer/Orders';
 // Retailer Pages
 import RetailerDashboard from './pages/retailer/Dashboard';
 import RetailerOrders from './pages/retailer/Orders';
+import RetailerCustomerOrders from './pages/retailer/CustomerOrders';
 import RetailerInventory from './pages/retailer/Inventory';
 import RetailerShipments from './pages/retailer/Shipments';
 import RetailerCustomers from './pages/retailer/Customers';
@@ -90,6 +91,7 @@ function App() {
         {/* Retailer Routes */}
         <Route path="/retailer/dashboard" element={<RetailerDashboard />} />
         <Route path="/retailer/orders" element={<RetailerOrders />} />
+        <Route path="/retailer/customer-orders" element={<RetailerCustomerOrders />} />
         <Route path="/retailer/inventory" element={<RetailerInventory />} />
         <Route path="/retailer/shipments" element={<RetailerShipments />} />
         <Route path="/retailer/customers" element={<RetailerCustomers />} />

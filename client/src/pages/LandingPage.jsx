@@ -131,39 +131,46 @@ const LandingPage = () => {
   // Cart functions
   const addToCart = (product) => {
     setCart(prev => {
-      const existing = prev.find(item => item.product_def_id === product.product_def_id);
+      // Use inventory_id as unique identifier (same product from different retailers)
+      const existing = prev.find(item => item.inventory_id === product.inventory_id);
       if (existing) {
         return prev.map(item =>
-          item.product_def_id === product.product_def_id
+          item.inventory_id === product.inventory_id
             ? { ...item, quantity: item.quantity + 1 }
             : item
         );
       }
       return [...prev, {
+        inventory_id: product.inventory_id,
         product_def_id: product.product_def_id,
+        outlet_id: product.outlet_id,
         name: product.name,
         price: product.base_price,
         quantity: 1,
         image_url: product.image_url,
         category: product.category,
-        manufacturer: product.manufacturer_name
+        manufacturer: product.manufacturer_name,
+        retailer: product.retailer_name,
+        stock: product.stock
       }];
     });
     setCartOpen(true);
   };
 
-  const updateQuantity = (productId, delta) => {
+  const updateQuantity = (inventoryId, delta) => {
     setCart(prev => prev.map(item => {
-      if (item.product_def_id === productId) {
+      if (item.inventory_id === inventoryId) {
         const newQty = item.quantity + delta;
+        // Don't exceed available stock
+        if (newQty > item.stock) return item;
         return newQty > 0 ? { ...item, quantity: newQty } : item;
       }
       return item;
     }).filter(item => item.quantity > 0));
   };
 
-  const removeFromCart = (productId) => {
-    setCart(prev => prev.filter(item => item.product_def_id !== productId));
+  const removeFromCart = (inventoryId) => {
+    setCart(prev => prev.filter(item => item.inventory_id !== inventoryId));
   };
 
   const cartTotal = cart.reduce((sum, item) => sum + (item.price * item.quantity), 0);
@@ -455,9 +462,10 @@ const LandingPage = () => {
   );
 };
 
-// Product Card Component - Extra compact for 4 per row, 2 rows in viewport
+// Product Card Component - Shows product with retailer info
 const ProductCard = ({ product, onAddToCart, onViewDetails }) => {
   const hasImage = product.image_url && product.image_url.trim() !== '';
+  const isOutOfStock = !product.in_stock || product.stock <= 0;
   
   return (
     <div className="bg-white rounded-md border border-slate-200 overflow-hidden hover:shadow-md transition group">
@@ -489,7 +497,7 @@ const ProductCard = ({ product, onAddToCart, onViewDetails }) => {
         </div>
         
         {/* Out of Stock Overlay */}
-        {!product.in_stock && (
+        {isOutOfStock && (
           <div className="absolute inset-0 bg-black/50 flex items-center justify-center">
             <span className="bg-red-500 text-white px-1.5 py-0.5 rounded text-[10px] font-medium">
               Out of Stock
@@ -498,19 +506,29 @@ const ProductCard = ({ product, onAddToCart, onViewDetails }) => {
         )}
       </div>
       
-      {/* Info - extra compact */}
+      {/* Info - shows product name + retailer */}
       <div className="p-2">
-        <p className="text-[9px] text-emerald-600 font-medium truncate">{product.manufacturer_name}</p>
         <h3 className="font-medium text-slate-900 text-[11px] leading-tight line-clamp-1">{product.name}</h3>
-        <p className="text-xs font-bold text-slate-900 mt-0.5">${parseFloat(product.base_price).toFixed(2)}</p>
+        <p className="text-[9px] text-slate-500 truncate">by {product.retailer_name}</p>
+        <p className="text-[9px] text-emerald-600 font-medium truncate">{product.manufacturer_name}</p>
+        <div className="flex items-center justify-between mt-0.5">
+          <p className="text-xs font-bold text-slate-900">${parseFloat(product.base_price).toFixed(2)}</p>
+          {!isOutOfStock && (
+            <p className="text-[9px] text-slate-400">{product.stock} left</p>
+          )}
+        </div>
         
         <button
-          onClick={() => onAddToCart(product)}
-          disabled={!product.in_stock}
-          className="w-full mt-1.5 bg-emerald-500 hover:bg-emerald-600 disabled:bg-slate-300 text-white py-1 rounded text-[10px] font-medium transition flex items-center justify-center gap-1"
+          onClick={() => !isOutOfStock && onAddToCart(product)}
+          disabled={isOutOfStock}
+          className={`w-full mt-1.5 py-1 rounded text-[10px] font-medium transition flex items-center justify-center gap-1
+            ${isOutOfStock 
+              ? 'bg-slate-200 text-slate-400 cursor-not-allowed' 
+              : 'bg-emerald-500 hover:bg-emerald-600 text-white'
+            }`}
         >
           <ShoppingCart className="w-2.5 h-2.5" />
-          Add
+          {isOutOfStock ? 'Unavailable' : 'Add'}
         </button>
       </div>
     </div>
@@ -546,7 +564,7 @@ const CartSidebar = ({ isOpen, onClose, cart, onUpdateQuantity, onRemove, total,
           ) : (
             <div className="space-y-4">
               {cart.map(item => (
-                <div key={item.product_def_id} className="flex gap-4 bg-slate-50 rounded-xl p-3">
+                <div key={item.inventory_id} className="flex gap-4 bg-slate-50 rounded-xl p-3">
                   {/* Image */}
                   <div className={`w-20 h-20 rounded-lg flex-shrink-0 overflow-hidden ${!item.image_url ? 'bg-slate-100 flex items-center justify-center' : ''}`}>
                     {item.image_url ? (
@@ -559,26 +577,28 @@ const CartSidebar = ({ isOpen, onClose, cart, onUpdateQuantity, onRemove, total,
                   {/* Info */}
                   <div className="flex-1">
                     <h4 className="font-medium text-sm text-slate-900 line-clamp-1">{item.name}</h4>
-                    <p className="text-xs text-slate-500">{item.manufacturer}</p>
+                    <p className="text-xs text-slate-500">from {item.retailer}</p>
+                    <p className="text-xs text-emerald-600">{item.manufacturer}</p>
                     <p className="font-bold text-slate-900 mt-1">${parseFloat(item.price).toFixed(2)}</p>
                     
                     {/* Quantity Controls */}
                     <div className="flex items-center gap-2 mt-2">
                       <button 
-                        onClick={() => onUpdateQuantity(item.product_def_id, -1)}
+                        onClick={() => onUpdateQuantity(item.inventory_id, -1)}
                         className="w-7 h-7 rounded-full bg-white border flex items-center justify-center hover:bg-slate-100"
                       >
                         <Minus className="w-3 h-3" />
                       </button>
                       <span className="font-medium text-sm w-8 text-center">{item.quantity}</span>
                       <button 
-                        onClick={() => onUpdateQuantity(item.product_def_id, 1)}
-                        className="w-7 h-7 rounded-full bg-white border flex items-center justify-center hover:bg-slate-100"
+                        onClick={() => onUpdateQuantity(item.inventory_id, 1)}
+                        disabled={item.quantity >= item.stock}
+                        className="w-7 h-7 rounded-full bg-white border flex items-center justify-center hover:bg-slate-100 disabled:opacity-50"
                       >
                         <Plus className="w-3 h-3" />
                       </button>
                       <button 
-                        onClick={() => onRemove(item.product_def_id)}
+                        onClick={() => onRemove(item.inventory_id)}
                         className="ml-auto p-1 text-red-500 hover:bg-red-50 rounded"
                       >
                         <Trash2 className="w-4 h-4" />

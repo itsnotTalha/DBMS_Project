@@ -5,7 +5,7 @@ import axios from 'axios';
 import { 
   Package, RefreshCw, Loader2, Search, Filter, ChevronDown,
   Truck, Clock, CheckCircle, XCircle, ShoppingCart, Eye,
-  MapPin, Calendar
+  MapPin, Calendar, Check
 } from 'lucide-react';
 import { customerMenuItems } from './menu';
 
@@ -38,6 +38,7 @@ const CustomerOrders = () => {
   const [refreshing, setRefreshing] = useState(false);
   const [orders, setOrders] = useState([]);
   const [expandedOrder, setExpandedOrder] = useState(null);
+  const [confirmingOrder, setConfirmingOrder] = useState(null);
   
   // Filters
   const [searchQuery, setSearchQuery] = useState('');
@@ -81,6 +82,24 @@ const CustomerOrders = () => {
     setRefreshing(true);
     await fetchOrders();
     setRefreshing(false);
+  };
+
+  const handleConfirmReceived = async (orderId) => {
+    setConfirmingOrder(orderId);
+    try {
+      const token = getToken();
+      await axios.put(
+        `${API_BASE}/customer/orders/${orderId}/confirm-received`,
+        {},
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+      await fetchOrders();
+    } catch (error) {
+      console.error('Error confirming order:', error);
+      alert(error.response?.data?.error || 'Failed to confirm order received');
+    } finally {
+      setConfirmingOrder(null);
+    }
   };
 
   // Filter orders
@@ -318,17 +337,35 @@ const CustomerOrders = () => {
                         {order.outlet_name && <p>Pickup: {order.outlet_name}</p>}
                       </div>
                       <div className="flex gap-2">
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            // Track order functionality
-                            alert('Order tracking coming soon!');
-                          }}
-                          className="flex items-center gap-2 px-4 py-2 bg-white border border-slate-200 rounded-lg text-sm font-medium hover:bg-slate-100 transition"
-                        >
-                          <Eye className="w-4 h-4" />
-                          Track Order
-                        </button>
+                        {order.status === 'Out_for_Delivery' && (
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleConfirmReceived(order.order_id);
+                            }}
+                            disabled={confirmingOrder === order.order_id}
+                            className="flex items-center gap-2 px-4 py-2 bg-emerald-500 hover:bg-emerald-600 text-white rounded-lg text-sm font-medium transition disabled:opacity-50"
+                          >
+                            {confirmingOrder === order.order_id ? (
+                              <Loader2 className="w-4 h-4 animate-spin" />
+                            ) : (
+                              <Check className="w-4 h-4" />
+                            )}
+                            Confirm Received
+                          </button>
+                        )}
+                        {order.tracking_number && (
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              alert(`Tracking: ${order.tracking_number}`);
+                            }}
+                            className="flex items-center gap-2 px-4 py-2 bg-white border border-slate-200 rounded-lg text-sm font-medium hover:bg-slate-100 transition"
+                          >
+                            <Eye className="w-4 h-4" />
+                            Track
+                          </button>
+                        )}
                       </div>
                     </div>
                   </div>

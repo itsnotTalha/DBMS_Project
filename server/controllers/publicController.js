@@ -1,30 +1,38 @@
 import db from '../config/db.js';
 
 // ------------------------------------------------------------------
-// GET ALL PRODUCTS (Public - No Auth Required)
+// GET ALL PRODUCTS FROM RETAILER INVENTORY (Public - No Auth Required)
+// Products shown are from retailer inventory, grouped by retailer
 // ------------------------------------------------------------------
 export const getPublicProducts = async (req, res) => {
   try {
-    const { category, search, limit = 50 } = req.query;
+    const { category, search, limit = 100 } = req.query;
 
     let query = `
       SELECT 
+        i.inventory_id,
+        i.outlet_id,
+        i.quantity_on_hand as stock,
         pd.product_def_id,
         pd.name,
         pd.description,
         pd.category,
         pd.base_price,
         pd.image_url,
-        pd.current_stock,
         m.company_name as manufacturer_name,
         m.license_number,
+        r.business_name as retailer_name,
+        ro.location_name as outlet_name,
         CASE 
-          WHEN pd.current_stock > 0 THEN TRUE 
+          WHEN i.quantity_on_hand > 0 THEN TRUE 
           ELSE FALSE 
         END as in_stock
-      FROM Product_Definitions pd
+      FROM Inventory i
+      JOIN Retailer_Outlets ro ON i.outlet_id = ro.outlet_id
+      JOIN Retailers r ON ro.retailer_id = r.retailer_id
+      JOIN Product_Definitions pd ON i.product_def_id = pd.product_def_id
       JOIN Manufacturers m ON pd.manufacturer_id = m.manufacturer_id
-      WHERE pd.is_active = TRUE
+      WHERE pd.is_active = TRUE AND ro.is_active = TRUE
     `;
 
     const params = [];
@@ -35,12 +43,12 @@ export const getPublicProducts = async (req, res) => {
     }
 
     if (search) {
-      query += ` AND (pd.name LIKE ? OR pd.description LIKE ? OR m.company_name LIKE ?)`;
+      query += ` AND (pd.name LIKE ? OR pd.description LIKE ? OR m.company_name LIKE ? OR r.business_name LIKE ?)`;
       const searchTerm = `%${search}%`;
-      params.push(searchTerm, searchTerm, searchTerm);
+      params.push(searchTerm, searchTerm, searchTerm, searchTerm);
     }
 
-    query += ` ORDER BY pd.created_at DESC LIMIT ?`;
+    query += ` ORDER BY i.quantity_on_hand DESC, pd.created_at DESC LIMIT ?`;
     params.push(parseInt(limit));
 
     const [products] = await db.query(query, params);
