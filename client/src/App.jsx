@@ -29,6 +29,11 @@ import RetailerSettings from './pages/retailer/Settings';
 // Customer Pages
 import CustomerDashboard from './pages/customer/Dashboard';
 import CustomerSettings from './pages/customer/Settings';
+import CustomerOrders from './pages/customer/Orders';
+import CustomerVerifyProduct from './pages/customer/VerifyProduct';
+import CustomerVerificationHistory from './pages/customer/VerificationHistory';
+import CustomerReportForm from './pages/customer/ReportForm';
+import CheckoutPage from './pages/CheckoutPage';
 
 // Admin Pages
 import AdminDashboard from './pages/admin/Dashboard';
@@ -95,7 +100,12 @@ function App() {
 
         {/* Customer Routes */}
         <Route path="/customer/dashboard" element={<CustomerDashboard />} />
+        <Route path="/customer/orders" element={<CustomerOrders />} />
+        <Route path="/customer/verify" element={<CustomerVerifyProduct />} />
+        <Route path="/customer/verifications" element={<CustomerVerificationHistory />} />
+        <Route path="/customer/report" element={<CustomerReportForm />} />
         <Route path="/customer/settings" element={<CustomerSettings />} />
+        <Route path="/checkout" element={<CheckoutPage />} />
 
         {/* Admin Routes */}
         <Route path="/admin/dashboard" element={<AdminDashboard />} />

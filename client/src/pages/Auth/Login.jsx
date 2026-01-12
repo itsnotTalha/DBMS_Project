@@ -1,11 +1,15 @@
 import React, { useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate, useLocation } from 'react-router-dom';
 
 const Login = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [rememberMe, setRememberMe] = useState(false); 
   const navigate = useNavigate();
+  const location = useLocation();
+  
+  // Get returnTo from location state (for checkout redirect)
+  const returnTo = location.state?.returnTo;
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -25,7 +29,13 @@ const Login = () => {
         storage.setItem('user', JSON.stringify(data.user));
         storage.setItem('token', data.token);
         
-        // 2. ROLE-BASED REDIRECTION
+        // 2. Check if there's a returnTo path (e.g., from checkout)
+        if (returnTo && data.user.role === 'Customer') {
+          navigate(returnTo);
+          return;
+        }
+        
+        // 3. ROLE-BASED REDIRECTION
         // We use a switch or if-else to send users to their specific routes
         const userRole = data.user.role?.toLowerCase();
 
