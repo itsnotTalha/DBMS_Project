@@ -5,58 +5,41 @@ import {
   Search, ShieldCheck, Lock, ShoppingCart, X, Plus, Minus, 
   Trash2, ChevronRight, Package, Truck, CheckCircle,
   Filter, Loader2, Pill, Smartphone, Apple, Shirt, Heart,
-  Sparkles, Car, Home, Dumbbell, BookOpen, Gift, Box
+  Sparkles, Car, Home, Dumbbell, BookOpen, Gift, Box, Store
 } from 'lucide-react';
 
 const API_BASE = 'http://localhost:5000/api';
 
-// Category icons mapping - using Lucide React icons
+// Custom CSS to hide scrollbar but allow scrolling
+const scrollbarHideStyle = `
+  .scrollbar-hide::-webkit-scrollbar {
+      display: none;
+  }
+  .scrollbar-hide {
+      -ms-overflow-style: none;
+      scrollbar-width: none;
+  }
+`;
+
+// Category icons mapping
 const CategoryIcon = ({ category, size = 24, className = "" }) => {
   const iconProps = { size, className };
-  
   switch(category) {
-    case 'Pharmaceuticals':
-      return <Pill {...iconProps} />;
-    case 'Electronics':
-      return <Smartphone {...iconProps} />;
+    case 'Pharmaceuticals': return <Pill {...iconProps} />;
+    case 'Electronics': return <Smartphone {...iconProps} />;
     case 'Food & Beverage':
-    case 'Food':
-      return <Apple {...iconProps} />;
-    case 'Beverage':
-      return <Package {...iconProps} />;
-    case 'Apparel':
-      return <Shirt {...iconProps} />;
-    case 'Medical':
-      return <Heart {...iconProps} />;
-    case 'Cosmetics':
-      return <Sparkles {...iconProps} />;
-    case 'Automotive':
-      return <Car {...iconProps} />;
-    case 'Home & Garden':
-      return <Home {...iconProps} />;
-    case 'Sports':
-      return <Dumbbell {...iconProps} />;
-    case 'Books':
-      return <BookOpen {...iconProps} />;
-    case 'Toys':
-      return <Gift {...iconProps} />;
-    default:
-      return <Box {...iconProps} />;
+    case 'Food': return <Apple {...iconProps} />;
+    case 'Beverage': return <Package {...iconProps} />;
+    case 'Apparel': return <Shirt {...iconProps} />;
+    case 'Medical': return <Heart {...iconProps} />;
+    case 'Cosmetics': return <Sparkles {...iconProps} />;
+    case 'Automotive': return <Car {...iconProps} />;
+    case 'Home & Garden': return <Home {...iconProps} />;
+    case 'Sports': return <Dumbbell {...iconProps} />;
+    case 'Books': return <BookOpen {...iconProps} />;
+    case 'Toys': return <Gift {...iconProps} />;
+    default: return <Box {...iconProps} />;
   }
-};
-
-const getCategoryGradient = (category) => {
-  const gradients = {
-    'Pharmaceuticals': 'from-blue-500 to-cyan-500',
-    'Electronics': 'from-purple-500 to-pink-500',
-    'Food & Beverage': 'from-green-500 to-emerald-500',
-    'Food': 'from-orange-500 to-yellow-500',
-    'Apparel': 'from-rose-500 to-pink-500',
-    'Medical': 'from-red-500 to-rose-500',
-    'Cosmetics': 'from-fuchsia-500 to-purple-500',
-    'Default': 'from-slate-500 to-slate-600'
-  };
-  return gradients[category] || gradients['Default'];
 };
 
 const LandingPage = () => {
@@ -73,8 +56,12 @@ const LandingPage = () => {
   
   // Cart state
   const [cart, setCart] = useState(() => {
-    const saved = localStorage.getItem('shopping_cart');
-    return saved ? JSON.parse(saved) : [];
+    try {
+      const saved = localStorage.getItem('shopping_cart');
+      return saved ? JSON.parse(saved) : [];
+    } catch (e) {
+      return [];
+    }
   });
   const [cartOpen, setCartOpen] = useState(false);
   
@@ -105,6 +92,7 @@ const LandingPage = () => {
       setProducts(response.data.products || []);
     } catch (error) {
       console.error('Error fetching products:', error);
+      setProducts([]); 
     } finally {
       setLoading(false);
     }
@@ -131,7 +119,7 @@ const LandingPage = () => {
   // Cart functions
   const addToCart = (product) => {
     setCart(prev => {
-      // Use inventory_id as unique identifier (same product from different retailers)
+      // Use inventory_id as unique identifier
       const existing = prev.find(item => item.inventory_id === product.inventory_id);
       if (existing) {
         return prev.map(item =>
@@ -161,7 +149,6 @@ const LandingPage = () => {
     setCart(prev => prev.map(item => {
       if (item.inventory_id === inventoryId) {
         const newQty = item.quantity + delta;
-        // Don't exceed available stock
         if (newQty > item.stock) return item;
         return newQty > 0 ? { ...item, quantity: newQty } : item;
       }
@@ -177,15 +164,19 @@ const LandingPage = () => {
   const cartCount = cart.reduce((sum, item) => sum + item.quantity, 0);
 
   const handleCheckout = () => {
-    const user = localStorage.getItem('user') || sessionStorage.getItem('user');
-    if (!user) {
+    const userStr = localStorage.getItem('user') || sessionStorage.getItem('user');
+    if (!userStr) {
       setShowLoginPrompt(true);
     } else {
-      const parsedUser = JSON.parse(user);
-      if (parsedUser.role !== 'Customer') {
+      try {
+        const parsedUser = JSON.parse(userStr);
+        if (parsedUser.role !== 'Customer') {
+          setShowLoginPrompt(true);
+        } else {
+          navigate('/checkout');
+        }
+      } catch (e) {
         setShowLoginPrompt(true);
-      } else {
-        navigate('/checkout');
       }
     }
   };
@@ -198,6 +189,8 @@ const LandingPage = () => {
 
   return (
     <div className="min-h-screen bg-slate-50">
+      <style>{scrollbarHideStyle}</style>
+      
       {/* Navigation */}
       <nav className="bg-white/95 backdrop-blur-md border-b border-slate-200 fixed w-full z-50 shadow-sm">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -326,34 +319,39 @@ const LandingPage = () => {
         </div>
       </div>
 
-      {/* Products Grid */}
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
-        <div className="flex justify-between items-center mb-4">
-          <h2 className="text-xl font-bold text-slate-900">
-            {selectedCategory === 'All' ? 'All Products' : selectedCategory}
+      {/* Products Horizontal Scroll Section */}
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <div className="flex justify-between items-center mb-6">
+          <h2 className="text-2xl font-bold text-slate-900">
+            {selectedCategory === 'All' ? 'Available Products' : selectedCategory}
           </h2>
           <span className="text-slate-500 text-sm">{products.length} products</span>
         </div>
 
         {loading ? (
-          <div className="flex justify-center items-center h-[50vh]">
+          <div className="flex justify-center items-center h-48">
             <Loader2 className="w-8 h-8 text-emerald-500 animate-spin" />
           </div>
         ) : products.length === 0 ? (
-          <div className="text-center h-[50vh] flex flex-col items-center justify-center">
+          <div className="text-center h-48 flex flex-col items-center justify-center bg-slate-50 rounded-xl border border-dashed border-slate-300">
             <Package className="w-12 h-12 text-slate-300 mb-3" />
             <h3 className="text-lg font-semibold text-slate-600 mb-1">No products found</h3>
             <p className="text-slate-400 text-sm">Try adjusting your search or filter</p>
           </div>
         ) : (
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-3" style={{ maxHeight: 'calc(100vh - 280px)', overflowY: 'auto' }}>
+          /* Horizontal Scroll Container */
+          <div className="flex overflow-x-auto gap-5 pb-8 px-1 scrollbar-hide snap-x snap-mandatory">
             {products.map(product => (
-              <ProductCard 
-                key={product.product_def_id} 
-                product={product} 
-                onAddToCart={addToCart}
-                onViewDetails={() => setSelectedProduct(product)}
-              />
+              <div 
+                key={product.inventory_id || product.product_def_id} // Unique Key
+                className="min-w-[300px] w-[300px] flex-shrink-0 snap-center" // Fixed Width
+              >
+                <ProductCard 
+                  product={product} 
+                  onAddToCart={addToCart}
+                  onViewDetails={() => setSelectedProduct(product)}
+                />
+              </div>
             ))}
           </div>
         )}
@@ -361,7 +359,7 @@ const LandingPage = () => {
 
       {/* Featured Manufacturers */}
       {manufacturers.length > 0 && (
-        <div className="bg-white py-12">
+        <div className="bg-white py-12 border-t border-slate-100">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <h2 className="text-2xl font-bold text-slate-900 mb-6">Trusted Manufacturers</h2>
             <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4">
@@ -392,7 +390,7 @@ const LandingPage = () => {
                 <span className="font-bold">BESS-PAS</span>
               </div>
               <p className="text-slate-400 text-sm">
-                Blockchain-Enhanced Supply Security - Product Authentication System
+                Blockchain-Enhanced Supply Security
               </p>
             </div>
             <div>
@@ -400,7 +398,6 @@ const LandingPage = () => {
               <ul className="space-y-2 text-slate-400 text-sm">
                 <li><Link to="/register" className="hover:text-white">Create Account</Link></li>
                 <li><Link to="/login" className="hover:text-white">Sign In</Link></li>
-                <li><a href="#" className="hover:text-white">Track Order</a></li>
               </ul>
             </div>
             <div>
@@ -408,13 +405,12 @@ const LandingPage = () => {
               <ul className="space-y-2 text-slate-400 text-sm">
                 <li><Link to="/business" className="hover:text-white">Partner with Us</Link></li>
                 <li><Link to="/register" className="hover:text-white">Become a Retailer</Link></li>
-                <li><Link to="/register" className="hover:text-white">Manufacturer Portal</Link></li>
               </ul>
             </div>
             <div>
               <h4 className="font-semibold mb-4">Verify Products</h4>
               <p className="text-slate-400 text-sm mb-4">
-                Scan QR codes or enter serial numbers to verify product authenticity.
+                Scan QR codes to verify authenticity.
               </p>
             </div>
           </div>
@@ -462,23 +458,23 @@ const LandingPage = () => {
   );
 };
 
-// Product Card Component - Shows product with retailer info
+// Product Card Component - Horizontal Layout Optimized
 const ProductCard = ({ product, onAddToCart, onViewDetails }) => {
   const hasImage = product.image_url && product.image_url.trim() !== '';
   const isOutOfStock = !product.in_stock || product.stock <= 0;
   
   return (
-    <div className="bg-white rounded-md border border-slate-200 overflow-hidden hover:shadow-md transition group">
-      {/* Image or Icon - compact height */}
+    <div className="bg-white rounded-2xl border border-slate-200 overflow-hidden hover:shadow-xl transition-all duration-300 group h-full flex flex-col">
+      {/* Image */}
       <div 
-        className="aspect-[5/3] relative cursor-pointer"
+        className="aspect-[4/3] relative cursor-pointer overflow-hidden bg-slate-50"
         onClick={onViewDetails}
       >
         {hasImage ? (
           <img 
             src={product.image_url} 
             alt={product.name}
-            className="w-full h-full object-cover group-hover:scale-105 transition duration-300"
+            className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
             onError={(e) => {
               e.target.style.display = 'none';
               e.target.nextSibling.style.display = 'flex';
@@ -486,50 +482,73 @@ const ProductCard = ({ product, onAddToCart, onViewDetails }) => {
           />
         ) : null}
         <div 
-          className={`w-full h-full bg-slate-100 flex items-center justify-center ${hasImage ? 'hidden' : 'flex'}`}
+          className={`w-full h-full flex items-center justify-center ${hasImage ? 'hidden' : 'flex'}`}
         >
-          <CategoryIcon category={product.category} size={28} className="text-slate-400" />
+          <CategoryIcon category={product.category} size={48} className="text-slate-300 group-hover:text-emerald-500 transition-colors" />
         </div>
         
         {/* Verified Badge */}
-        <div className="absolute top-1 right-1 bg-white/90 backdrop-blur rounded-full p-0.5 shadow-sm">
-          <ShieldCheck className="w-2.5 h-2.5 text-emerald-500" />
+        <div className="absolute top-3 right-3 bg-white/95 backdrop-blur-sm rounded-full p-1.5 shadow-sm" title="Verified Authentic">
+          <ShieldCheck className="w-4 h-4 text-emerald-500" />
         </div>
         
         {/* Out of Stock Overlay */}
         {isOutOfStock && (
-          <div className="absolute inset-0 bg-black/50 flex items-center justify-center">
-            <span className="bg-red-500 text-white px-1.5 py-0.5 rounded text-[10px] font-medium">
+          <div className="absolute inset-0 bg-white/60 backdrop-blur-[1px] flex items-center justify-center z-10">
+            <span className="bg-red-500 shadow-lg text-white px-3 py-1.5 rounded-full text-xs font-bold uppercase tracking-wider">
               Out of Stock
             </span>
           </div>
         )}
+
+        {/* Hover Action Overlay */}
+        {!isOutOfStock && (
+          <div className="absolute inset-0 bg-black/20 opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-center justify-center">
+             <button 
+                onClick={(e) => { e.stopPropagation(); onViewDetails(); }}
+                className="bg-white text-slate-900 px-4 py-2 rounded-full font-medium text-sm transform translate-y-4 group-hover:translate-y-0 transition-transform duration-300 hover:bg-emerald-50"
+             >
+               Quick View
+             </button>
+          </div>
+        )}
       </div>
       
-      {/* Info - shows product name + retailer */}
-      <div className="p-2">
-        <h3 className="font-medium text-slate-900 text-[11px] leading-tight line-clamp-1">{product.name}</h3>
-        <p className="text-[9px] text-slate-500 truncate">by {product.retailer_name}</p>
-        <p className="text-[9px] text-emerald-600 font-medium truncate">{product.manufacturer_name}</p>
-        <div className="flex items-center justify-between mt-0.5">
-          <p className="text-xs font-bold text-slate-900">${parseFloat(product.base_price).toFixed(2)}</p>
-          {!isOutOfStock && (
-            <p className="text-[9px] text-slate-400">{product.stock} left</p>
-          )}
+      {/* Info */}
+      <div className="p-4 flex-1 flex flex-col">
+        <div className="mb-2">
+          <span className="inline-block px-2 py-0.5 rounded text-[10px] font-semibold bg-slate-100 text-slate-600 mb-2">
+            {product.category}
+          </span>
+          <h3 className="font-bold text-slate-900 text-lg leading-tight line-clamp-1 group-hover:text-emerald-600 transition-colors" title={product.name}>
+            {product.name}
+          </h3>
+        </div>
+
+        <div className="flex items-center gap-1.5 text-xs text-slate-500 mb-4">
+          <Store className="w-3.5 h-3.5" />
+          <span className="truncate max-w-[150px]">{product.retailer_name}</span>
         </div>
         
-        <button
-          onClick={() => !isOutOfStock && onAddToCart(product)}
-          disabled={isOutOfStock}
-          className={`w-full mt-1.5 py-1 rounded text-[10px] font-medium transition flex items-center justify-center gap-1
-            ${isOutOfStock 
-              ? 'bg-slate-200 text-slate-400 cursor-not-allowed' 
-              : 'bg-emerald-500 hover:bg-emerald-600 text-white'
-            }`}
-        >
-          <ShoppingCart className="w-2.5 h-2.5" />
-          {isOutOfStock ? 'Unavailable' : 'Add'}
-        </button>
+        <div className="mt-auto flex items-center justify-between">
+          <div>
+            <p className="text-xs text-slate-400 font-medium">Price</p>
+            <p className="text-xl font-extrabold text-slate-900">${parseFloat(product.base_price || 0).toFixed(2)}</p>
+          </div>
+          
+          <button
+            onClick={() => !isOutOfStock && onAddToCart(product)}
+            disabled={isOutOfStock}
+            className={`w-10 h-10 rounded-full flex items-center justify-center transition-all duration-300 shadow-sm
+              ${isOutOfStock 
+                ? 'bg-slate-100 text-slate-300 cursor-not-allowed' 
+                : 'bg-emerald-500 hover:bg-emerald-600 text-white hover:scale-110 hover:shadow-emerald-200'
+              }`}
+            title="Add to Cart"
+          >
+            <Plus className="w-5 h-5" />
+          </button>
+        </div>
       </div>
     </div>
   );
@@ -541,32 +560,36 @@ const CartSidebar = ({ isOpen, onClose, cart, onUpdateQuantity, onRemove, total,
 
   return (
     <>
-      {/* Overlay */}
-      <div className="fixed inset-0 bg-black/50 z-50" onClick={onClose} />
+      <div className="fixed inset-0 bg-black/50 z-50 backdrop-blur-sm" onClick={onClose} />
       
-      {/* Sidebar */}
-      <div className="fixed right-0 top-0 h-full w-full max-w-md bg-white z-50 shadow-2xl flex flex-col">
-        {/* Header */}
-        <div className="flex items-center justify-between p-4 border-b">
-          <h2 className="text-lg font-bold">Shopping Cart</h2>
-          <button onClick={onClose} className="p-2 hover:bg-slate-100 rounded-full">
-            <X className="w-5 h-5" />
+      <div className="fixed right-0 top-0 h-full w-full max-w-md bg-white z-50 shadow-2xl flex flex-col animate-slide-in">
+        <div className="flex items-center justify-between p-5 border-b border-slate-100">
+          <h2 className="text-xl font-bold text-slate-900">Shopping Cart</h2>
+          <button onClick={onClose} className="p-2 hover:bg-slate-100 rounded-full transition-colors">
+            <X className="w-6 h-6 text-slate-500" />
           </button>
         </div>
         
-        {/* Cart Items */}
-        <div className="flex-1 overflow-y-auto p-4">
+        <div className="flex-1 overflow-y-auto p-5">
           {cart.length === 0 ? (
-            <div className="text-center py-12">
-              <ShoppingCart className="w-16 h-16 text-slate-300 mx-auto mb-4" />
-              <p className="text-slate-500">Your cart is empty</p>
+            <div className="h-full flex flex-col items-center justify-center text-center">
+              <div className="w-20 h-20 bg-slate-50 rounded-full flex items-center justify-center mb-4">
+                <ShoppingCart className="w-10 h-10 text-slate-300" />
+              </div>
+              <h3 className="text-lg font-medium text-slate-900">Your cart is empty</h3>
+              <p className="text-slate-500 mt-1 max-w-[200px]">Looks like you haven't added any items yet.</p>
+              <button 
+                onClick={onClose}
+                className="mt-6 px-6 py-2 bg-white border border-slate-300 rounded-full text-sm font-medium hover:bg-slate-50 transition"
+              >
+                Start Shopping
+              </button>
             </div>
           ) : (
-            <div className="space-y-4">
+            <div className="space-y-6">
               {cart.map(item => (
-                <div key={item.inventory_id} className="flex gap-4 bg-slate-50 rounded-xl p-3">
-                  {/* Image */}
-                  <div className={`w-20 h-20 rounded-lg flex-shrink-0 overflow-hidden ${!item.image_url ? 'bg-slate-100 flex items-center justify-center' : ''}`}>
+                <div key={item.inventory_id} className="flex gap-4">
+                  <div className={`w-20 h-20 rounded-xl flex-shrink-0 overflow-hidden border border-slate-100 ${!item.image_url ? 'bg-slate-50 flex items-center justify-center' : ''}`}>
                     {item.image_url ? (
                       <img src={item.image_url} alt={item.name} className="w-full h-full object-cover" />
                     ) : (
@@ -574,35 +597,38 @@ const CartSidebar = ({ isOpen, onClose, cart, onUpdateQuantity, onRemove, total,
                     )}
                   </div>
                   
-                  {/* Info */}
-                  <div className="flex-1">
-                    <h4 className="font-medium text-sm text-slate-900 line-clamp-1">{item.name}</h4>
-                    <p className="text-xs text-slate-500">from {item.retailer}</p>
-                    <p className="text-xs text-emerald-600">{item.manufacturer}</p>
-                    <p className="font-bold text-slate-900 mt-1">${parseFloat(item.price).toFixed(2)}</p>
-                    
-                    {/* Quantity Controls */}
-                    <div className="flex items-center gap-2 mt-2">
-                      <button 
-                        onClick={() => onUpdateQuantity(item.inventory_id, -1)}
-                        className="w-7 h-7 rounded-full bg-white border flex items-center justify-center hover:bg-slate-100"
-                      >
-                        <Minus className="w-3 h-3" />
-                      </button>
-                      <span className="font-medium text-sm w-8 text-center">{item.quantity}</span>
-                      <button 
-                        onClick={() => onUpdateQuantity(item.inventory_id, 1)}
-                        disabled={item.quantity >= item.stock}
-                        className="w-7 h-7 rounded-full bg-white border flex items-center justify-center hover:bg-slate-100 disabled:opacity-50"
-                      >
-                        <Plus className="w-3 h-3" />
-                      </button>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex justify-between items-start mb-1">
+                      <h4 className="font-semibold text-slate-900 line-clamp-1 pr-4">{item.name}</h4>
                       <button 
                         onClick={() => onRemove(item.inventory_id)}
-                        className="ml-auto p-1 text-red-500 hover:bg-red-50 rounded"
+                        className="text-slate-400 hover:text-red-500 transition-colors p-1 -mr-2"
                       >
                         <Trash2 className="w-4 h-4" />
                       </button>
+                    </div>
+                    
+                    <p className="text-xs text-slate-500 mb-2 truncate">From {item.retailer}</p>
+                    
+                    <div className="flex items-center justify-between">
+                      <p className="font-bold text-slate-900">${parseFloat(item.price).toFixed(2)}</p>
+                      
+                      <div className="flex items-center gap-3 bg-slate-50 rounded-lg p-1">
+                        <button 
+                          onClick={() => onUpdateQuantity(item.inventory_id, -1)}
+                          className="w-6 h-6 rounded-md bg-white shadow-sm flex items-center justify-center hover:bg-slate-100 text-slate-600"
+                        >
+                          <Minus className="w-3 h-3" />
+                        </button>
+                        <span className="font-medium text-sm w-4 text-center">{item.quantity}</span>
+                        <button 
+                          onClick={() => onUpdateQuantity(item.inventory_id, 1)}
+                          disabled={item.quantity >= item.stock}
+                          className="w-6 h-6 rounded-md bg-white shadow-sm flex items-center justify-center hover:bg-slate-100 text-slate-600 disabled:opacity-50"
+                        >
+                          <Plus className="w-3 h-3" />
+                        </button>
+                      </div>
                     </div>
                   </div>
                 </div>
@@ -611,18 +637,23 @@ const CartSidebar = ({ isOpen, onClose, cart, onUpdateQuantity, onRemove, total,
           )}
         </div>
         
-        {/* Footer */}
         {cart.length > 0 && (
-          <div className="border-t p-4 space-y-4">
-            <div className="flex justify-between text-lg font-bold">
-              <span>Total</span>
-              <span>${total.toFixed(2)}</span>
+          <div className="border-t border-slate-100 p-5 bg-slate-50">
+            <div className="space-y-2 mb-4">
+              <div className="flex justify-between text-sm text-slate-500">
+                <span>Subtotal</span>
+                <span>${total.toFixed(2)}</span>
+              </div>
+              <div className="flex justify-between text-lg font-bold text-slate-900 pt-2 border-t border-slate-200">
+                <span>Total</span>
+                <span>${total.toFixed(2)}</span>
+              </div>
             </div>
             <button 
               onClick={onCheckout}
-              className="w-full bg-emerald-500 hover:bg-emerald-600 text-white py-3 rounded-xl font-semibold flex items-center justify-center gap-2"
+              className="w-full bg-slate-900 hover:bg-slate-800 text-white py-3.5 rounded-xl font-semibold flex items-center justify-center gap-2 transition-all hover:scale-[1.02]"
             >
-              Proceed to Checkout
+              Checkout
               <ChevronRight className="w-5 h-5" />
             </button>
           </div>
@@ -638,70 +669,95 @@ const ProductModal = ({ product, onClose, onAddToCart }) => {
   
   return (
     <>
-      <div className="fixed inset-0 bg-black/50 z-50" onClick={onClose} />
-      <div className="fixed inset-4 md:inset-auto md:top-1/2 md:left-1/2 md:-translate-x-1/2 md:-translate-y-1/2 md:max-w-2xl md:w-full bg-white rounded-2xl z-50 overflow-hidden shadow-2xl">
+      <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 transition-opacity" onClick={onClose} />
+      <div className="fixed inset-4 md:inset-auto md:top-1/2 md:left-1/2 md:-translate-x-1/2 md:-translate-y-1/2 md:max-w-4xl md:w-full bg-white md:rounded-3xl rounded-xl z-50 overflow-hidden shadow-2xl flex flex-col md:flex-row md:h-[600px] animate-scale-in">
         <button 
           onClick={onClose}
-          className="absolute top-4 right-4 p-2 bg-white/80 backdrop-blur rounded-full hover:bg-slate-100 z-10"
+          className="absolute top-4 right-4 p-2 bg-white/80 backdrop-blur-md rounded-full hover:bg-slate-100 z-10 transition-colors shadow-sm"
         >
           <X className="w-5 h-5" />
         </button>
         
-        <div className="md:flex">
-          {/* Image */}
-          <div className="md:w-1/2">
-            {hasImage ? (
-              <img 
-                src={product.image_url} 
-                alt={product.name}
-                className="w-full h-64 md:h-full object-cover"
-              />
-            ) : (
-              <div className="w-full h-64 md:h-full bg-slate-100 flex items-center justify-center">
-                <CategoryIcon category={product.category} size={80} className="text-slate-400" />
-              </div>
-            )}
-          </div>
-          
-          {/* Details */}
-          <div className="md:w-1/2 p-6">
-            <div className="flex items-center gap-2 mb-2">
-              <ShieldCheck className="w-5 h-5 text-emerald-500" />
-              <span className="text-emerald-600 font-medium text-sm">Verified Product</span>
+        <div className="md:w-1/2 relative bg-slate-50">
+          {hasImage ? (
+            <img 
+              src={product.image_url} 
+              alt={product.name}
+              className="w-full h-64 md:h-full object-cover"
+            />
+          ) : (
+            <div className="w-full h-64 md:h-full flex items-center justify-center">
+              <CategoryIcon category={product.category} size={100} className="text-slate-300" />
             </div>
-            
-            <p className="text-sm text-slate-500 mb-1">{product.manufacturer_name}</p>
-            <h2 className="text-2xl font-bold text-slate-900 mb-2">{product.name}</h2>
-            <p className="text-slate-600 text-sm mb-4">{product.description || 'No description available'}</p>
-            
-            <div className="flex items-center gap-2 mb-4">
-              <span className="px-3 py-1 bg-slate-100 rounded-full text-sm flex items-center gap-1">
-                <CategoryIcon category={product.category} size={14} /> {product.category}
+          )}
+          
+          <div className="absolute bottom-4 left-4 flex gap-2">
+             <span className="px-3 py-1 bg-white/90 backdrop-blur text-slate-900 text-xs font-bold rounded-lg shadow-sm flex items-center gap-1.5">
+               <ShieldCheck className="w-3.5 h-3.5 text-emerald-500" />
+               Verified Authentic
+             </span>
+          </div>
+        </div>
+        
+        <div className="md:w-1/2 p-6 md:p-10 flex flex-col overflow-y-auto">
+          <div className="mb-6">
+            <div className="flex items-center gap-2 mb-3">
+              <span className="px-2.5 py-0.5 bg-slate-100 text-slate-600 rounded text-xs font-semibold uppercase tracking-wide">
+                {product.category}
               </span>
               {product.in_stock ? (
-                <span className="px-3 py-1 bg-green-100 text-green-700 rounded-full text-sm">In Stock</span>
+                <span className="text-green-600 text-xs font-medium flex items-center gap-1">
+                  <span className="w-1.5 h-1.5 bg-green-500 rounded-full"></span>
+                  In Stock ({product.stock} available)
+                </span>
               ) : (
-                <span className="px-3 py-1 bg-red-100 text-red-700 rounded-full text-sm">Out of Stock</span>
+                <span className="text-red-600 text-xs font-medium">Out of Stock</span>
               )}
             </div>
             
-            <p className="text-3xl font-bold text-slate-900 mb-6">${parseFloat(product.base_price).toFixed(2)}</p>
+            <h2 className="text-3xl font-bold text-slate-900 mb-2 leading-tight">{product.name}</h2>
+            <p className="text-lg text-slate-500 font-medium">{product.manufacturer_name}</p>
+          </div>
+          
+          <div className="prose prose-sm text-slate-600 mb-8">
+            <p>{product.description || 'No description available for this product.'}</p>
+          </div>
+          
+          <div className="mt-auto">
+            <div className="flex items-center justify-between mb-6 p-4 bg-slate-50 rounded-xl border border-slate-100">
+              <div>
+                <p className="text-xs text-slate-500 font-medium uppercase mb-1">Sold By</p>
+                <div className="flex items-center gap-2">
+                  <Store className="w-4 h-4 text-emerald-600" />
+                  <span className="font-semibold text-slate-900">{product.retailer_name}</span>
+                </div>
+              </div>
+              <div className="text-right">
+                <p className="text-3xl font-bold text-slate-900">${parseFloat(product.base_price).toFixed(2)}</p>
+              </div>
+            </div>
             
-            <button
-              onClick={() => {
-                onAddToCart(product);
-                onClose();
-              }}
-              disabled={!product.in_stock}
-              className="w-full bg-emerald-500 hover:bg-emerald-600 disabled:bg-slate-300 text-white py-3 rounded-xl font-semibold flex items-center justify-center gap-2"
-            >
-              <ShoppingCart className="w-5 h-5" />
-              Add to Cart
-            </button>
+            <div className="grid grid-cols-2 gap-3">
+               <div className="col-span-2">
+                  <button
+                    onClick={() => {
+                      onAddToCart(product);
+                      onClose();
+                    }}
+                    disabled={!product.in_stock}
+                    className="w-full bg-emerald-500 hover:bg-emerald-600 disabled:bg-slate-200 disabled:text-slate-400 text-white py-4 rounded-xl font-bold text-lg flex items-center justify-center gap-2 transition-all shadow-lg shadow-emerald-200 disabled:shadow-none"
+                  >
+                    <ShoppingCart className="w-5 h-5" />
+                    {product.in_stock ? 'Add to Cart' : 'Out of Stock'}
+                  </button>
+               </div>
+            </div>
             
-            <p className="text-xs text-slate-400 mt-4 text-center">
-              License: {product.license_number}
-            </p>
+            {product.license_number && (
+              <p className="text-[10px] text-slate-400 mt-4 text-center font-mono">
+                License ID: {product.license_number}
+              </p>
+            )}
           </div>
         </div>
       </div>
@@ -713,41 +769,37 @@ const ProductModal = ({ product, onClose, onAddToCart }) => {
 const LoginPromptModal = ({ onClose, onLogin, onRegister }) => {
   return (
     <>
-      <div className="fixed inset-0 bg-black/50 z-50" onClick={onClose} />
-      <div className="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-white rounded-2xl z-50 p-6 max-w-md w-full mx-4 shadow-2xl">
+      <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 transition-opacity" onClick={onClose} />
+      <div className="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-white rounded-2xl z-50 p-8 max-w-sm w-full mx-4 shadow-2xl animate-scale-in">
         <button 
           onClick={onClose}
-          className="absolute top-4 right-4 p-2 hover:bg-slate-100 rounded-full"
+          className="absolute top-4 right-4 p-2 hover:bg-slate-100 rounded-full transition-colors"
         >
-          <X className="w-5 h-5" />
+          <X className="w-5 h-5 text-slate-400" />
         </button>
         
-        <div className="text-center mb-6">
-          <div className="w-16 h-16 bg-emerald-100 rounded-full flex items-center justify-center mx-auto mb-4">
-            <ShoppingCart className="w-8 h-8 text-emerald-600" />
+        <div className="text-center mb-8">
+          <div className="w-16 h-16 bg-emerald-50 rounded-2xl flex items-center justify-center mx-auto mb-4 transform rotate-3">
+            <Lock className="w-8 h-8 text-emerald-600" />
           </div>
-          <h3 className="text-xl font-bold text-slate-900">Complete Your Purchase</h3>
-          <p className="text-slate-500 mt-2">Sign in or create an account to checkout</p>
+          <h3 className="text-2xl font-bold text-slate-900 mb-2">Account Required</h3>
+          <p className="text-slate-500 leading-relaxed">Please sign in or create an account to proceed with your purchase.</p>
         </div>
         
         <div className="space-y-3">
           <button
             onClick={onLogin}
-            className="w-full bg-emerald-500 hover:bg-emerald-600 text-white py-3 rounded-xl font-semibold"
+            className="w-full bg-slate-900 hover:bg-slate-800 text-white py-3.5 rounded-xl font-semibold transition-all hover:scale-[1.02] shadow-lg shadow-slate-200"
           >
             Sign In
           </button>
           <button
             onClick={onRegister}
-            className="w-full border-2 border-emerald-500 text-emerald-600 hover:bg-emerald-50 py-3 rounded-xl font-semibold"
+            className="w-full bg-white border-2 border-slate-200 text-slate-700 hover:border-emerald-500 hover:text-emerald-600 py-3.5 rounded-xl font-semibold transition-all hover:bg-emerald-50"
           >
             Create Account
           </button>
         </div>
-        
-        <p className="text-xs text-slate-400 text-center mt-4">
-          Your cart will be saved after you sign in
-        </p>
       </div>
     </>
   );
