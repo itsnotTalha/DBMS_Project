@@ -9,6 +9,8 @@ import dashboardRoutes from './routes/dashboardRoutes.js';
 import manufacturerRoutes from './routes/manufacturerRoutes.js';
 import retailerRoutes from './routes/retailerRoutes.js';
 import settingsRoutes from './routes/settingsRoutes.js';
+import publicRoutes from './routes/publicRoutes.js';
+import customerRoutes from './routes/customerRoutes.js';
 import { verifyProduct } from './controllers/verifyController.js';
 
 const app = express();
@@ -22,6 +24,8 @@ app.use('/api/dashboard', dashboardRoutes);
 app.use('/api/manufacturer', manufacturerRoutes);
 app.use('/api/retailer', retailerRoutes);
 app.use('/api/settings', settingsRoutes);
+app.use('/api/public', publicRoutes);
+app.use('/api/customer', customerRoutes);
 
 // Global verify product route (no auth required)
 app.get('/api/verify/:serial_code', verifyProduct);
