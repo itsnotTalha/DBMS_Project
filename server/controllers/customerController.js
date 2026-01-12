@@ -538,3 +538,43 @@ export const getCustomerProfile = async (req, res) => {
     res.status(500).json({ error: 'Failed to fetch profile' });
   }
 };
+
+// ------------------------------------------------------------------
+// GET CUSTOMER'S PURCHASED PRODUCTS (My Products)
+// Returns products from completed orders
+// ------------------------------------------------------------------
+export const getMyProducts = async (req, res) => {
+  try {
+    const customerId = req.user.id;
+
+    const [products] = await db.query(`
+      SELECT 
+        co.order_id,
+        co.order_date,
+        oi.product_def_id,
+        oi.quantity,
+        oi.unit_price,
+        pd.name,
+        pd.description,
+        pd.category,
+        pd.image_url,
+        m.company_name as manufacturer_name,
+        ro.location_name as outlet_name,
+        r.business_name as retailer_name
+      FROM Customer_Orders co
+      JOIN Order_Items oi ON co.order_id = oi.order_id
+      JOIN Product_Definitions pd ON oi.product_def_id = pd.product_def_id
+      JOIN Manufacturers m ON pd.manufacturer_id = m.manufacturer_id
+      JOIN Retailer_Outlets ro ON co.outlet_id = ro.outlet_id
+      JOIN Retailers r ON ro.retailer_id = r.retailer_id
+      WHERE co.customer_id = ? AND co.status = 'Completed'
+      ORDER BY co.order_date DESC
+    `, [customerId]);
+
+    res.json({ products });
+
+  } catch (error) {
+    console.error('Get my products error:', error);
+    res.status(500).json({ error: 'Failed to fetch products' });
+  }
+};

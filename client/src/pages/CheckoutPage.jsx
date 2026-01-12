@@ -374,7 +374,7 @@ const CheckoutPage = () => {
               {/* Place Order Button */}
               <button
                 onClick={handlePlaceOrder}
-                disabled={submitting || !selectedOutlet || !shippingAddress.trim()}
+                disabled={submitting || cart.length === 0 || !shippingAddress.trim()}
                 className="w-full mt-6 bg-emerald-500 hover:bg-emerald-600 disabled:bg-slate-300 text-white py-4 rounded-xl font-semibold flex items-center justify-center gap-2"
               >
                 {submitting ? (
