@@ -1,6 +1,6 @@
 import db from '../config/db.js';
 
-// 1. Get All Users (with details)
+// --- 1. Get All Users (Main User Monitor) ---
 export const getAllUsers = async (req, res) => {
   try {
     const query = `
@@ -9,7 +9,10 @@ export const getAllUsers = async (req, res) => {
         u.email, 
         u.role, 
         u.created_at,
-        u.is_active,
+        CASE 
+            WHEN u.is_active = 1 THEN 'Active' 
+            ELSE 'Inactive' 
+        END as status,
         CASE 
           WHEN u.role = 'Manufacturer' THEN m.company_name
           WHEN u.role = 'Retailer' THEN r.business_name
@@ -29,7 +32,6 @@ export const getAllUsers = async (req, res) => {
       ORDER BY u.created_at DESC
     `;
     
-    // CORRECTED: Removed .promise(), just use await db.query
     const [users] = await db.query(query);
     res.json(users);
   } catch (error) {
@@ -38,17 +40,55 @@ export const getAllUsers = async (req, res) => {
   }
 };
 
-// 2. Monitor Connections (Retailer <-> Manufacturer)
+// --- 2. Get User Details (For Modal) ---
+export const getUserDetails = async (req, res) => {
+  const { id } = req.params;
+  try {
+    const [users] = await db.query(
+      `SELECT user_id, email, role, created_at, is_active FROM Users WHERE user_id = ?`, 
+      [id]
+    );
+
+    if (users.length === 0) return res.status(404).json({ error: 'User not found' });
+
+    const user = users[0];
+    let details = {};
+    let displayName = 'N/A';
+    const role = user.role.toLowerCase();
+
+    if (role === 'manufacturer') {
+      const [m] = await db.query('SELECT * FROM Manufacturers WHERE manufacturer_id = ?', [id]);
+      if (m.length > 0) { details = m[0]; displayName = details.company_name; }
+    } else if (role === 'retailer') {
+      const [r] = await db.query('SELECT * FROM Retailers WHERE retailer_id = ?', [id]);
+      if (r.length > 0) { details = r[0]; displayName = details.business_name; }
+    } else if (role === 'customer') {
+      const [c] = await db.query('SELECT * FROM Customers WHERE customer_id = ?', [id]);
+      if (c.length > 0) { details = c[0]; displayName = `${details.first_name} ${details.last_name}`; }
+    }
+
+    res.json({ 
+      ...user, 
+      ...details, 
+      username: displayName,
+      status: user.is_active ? 'Active' : 'Inactive'
+    });
+
+  } catch (error) {
+    console.error("Error fetching user details:", error);
+    res.status(500).json({ error: error.message });
+  }
+};
+
+// --- 3. Network Connections ---
 export const getNetworkConnections = async (req, res) => {
   try {
-    // CORRECTED SQL: Uses 'Inventory' instead of 'Retailer_Inventory'
-    // and correctly joins 'Retailer_Outlets'
     const query = `
       SELECT 
         r.business_name as retailer,
         m.company_name as manufacturer,
         COUNT(i.inventory_id) as products_stocked,
-        SUM(i.quantity_on_hand) as total_stock
+        COALESCE(SUM(i.quantity_on_hand), 0) as total_stock
       FROM Inventory i
       JOIN Retailer_Outlets ro ON i.outlet_id = ro.outlet_id
       JOIN Retailers r ON ro.retailer_id = r.retailer_id
@@ -56,8 +96,6 @@ export const getNetworkConnections = async (req, res) => {
       JOIN Manufacturers m ON pd.manufacturer_id = m.manufacturer_id
       GROUP BY r.retailer_id, m.manufacturer_id
     `;
-    
-    // CORRECTED: Removed .promise()
     const [connections] = await db.query(query);
     res.json(connections);
   } catch (error) {
@@ -66,32 +104,12 @@ export const getNetworkConnections = async (req, res) => {
   }
 };
 
-// 3. Get System Alerts
+// --- 4. System Alerts ---
 export const getSystemAlerts = async (req, res) => {
   try {
-    // CORRECTED: Removed .promise()
     const [alerts] = await db.query(`
-      SELECT 
-        ra.alert_id, 
-        ra.alert_type, 
-        ra.description, 
-        ra.created_at as timestamp, 
-        ra.severity,
-        CASE 
-            WHEN ra.related_entity = 'Batch' THEN m_b.company_name
-            WHEN ra.related_entity = 'Product' THEN m_p.company_name
-            ELSE 'System'
-        END as manufacturer,
-        'System Alert' as device_type
-      FROM Risk_Alerts ra
-      LEFT JOIN Batches b ON ra.related_entity = 'Batch' AND ra.entity_id = b.batch_id
-      LEFT JOIN Manufacturers m_b ON b.manufacturer_id = m_b.manufacturer_id
-      LEFT JOIN Product_Definitions pd ON ra.related_entity = 'Product' AND ra.entity_id = pd.product_def_id
-      LEFT JOIN Manufacturers m_p ON pd.manufacturer_id = m_p.manufacturer_id
-      ORDER BY ra.created_at DESC
-      LIMIT 50
+      SELECT * FROM Risk_Alerts ORDER BY created_at DESC LIMIT 50
     `);
-    
     res.json({ alerts });
   } catch (error) {
     console.error('Error fetching alerts:', error);
@@ -99,58 +117,49 @@ export const getSystemAlerts = async (req, res) => {
   }
 };
 
-
-export const getUserDetails = async (req, res) => {
-  const { id } = req.params;
+// --- 5. Dashboard Stats (NEW - REQUIRED FOR DASHBOARD) ---
+export const getDashboardStats = async (req, res) => {
   try {
-    // 1. Fetch basic info from Users table (Exclude 'name'/'username' as they don't exist)
-    const [users] = await db.query(
-      `SELECT user_id, email, role, created_at 
-       FROM Users WHERE user_id = ?`, 
-      [id]
-    );
+    // Run counts in parallel
+    const [userCount] = await db.query('SELECT COUNT(*) as count FROM Users');
+    const [manuCount] = await db.query('SELECT COUNT(*) as count FROM Manufacturers');
+    const [alertCount] = await db.query('SELECT COUNT(*) as count FROM Risk_Alerts');
+    
+    // You can add a transaction count if you have a transactions table, otherwise 0
+    const txnValues = 0; 
 
-    if (users.length === 0) {
-      return res.status(404).json({ error: 'User not found' });
-    }
-
-    const user = users[0];
-    let details = {};
-    let displayName = 'N/A';
-
-    // 2. Fetch details from the specific role table
-    const role = user.role.toLowerCase();
-
-    if (role === 'manufacturer') {
-      const [m] = await db.query('SELECT * FROM Manufacturers WHERE manufacturer_id = ?', [id]);
-      if (m.length > 0) {
-        details = m[0];
-        displayName = details.company_name;
-      }
-    } else if (role === 'retailer') {
-      const [r] = await db.query('SELECT * FROM Retailers WHERE retailer_id = ?', [id]);
-      if (r.length > 0) {
-        details = r[0];
-        displayName = details.business_name;
-      }
-    } else if (role === 'customer') {
-      const [c] = await db.query('SELECT * FROM Customers WHERE customer_id = ?', [id]);
-      if (c.length > 0) {
-        details = c[0];
-        displayName = `${details.first_name} ${details.last_name}`;
-      }
-    }
-
-    // 3. Combine data and map fields for the Frontend
-    res.json({ 
-      ...user, 
-      ...details, 
-      username: displayName,           // Send 'username' so the Modal displays the name correctly
-      is_verified: user.status === 'active' // Ensure the verify button logic works
+    res.json({
+      total_users: userCount[0].count,
+      active_manufacturers: manuCount[0].count,
+      system_alerts: alertCount[0].count,
+      total_transactions: txnValues
     });
-
   } catch (error) {
-    console.error("Error fetching user details:", error);
-    res.status(500).json({ error: error.message });
+    console.error('Error fetching stats:', error);
+    res.status(500).json({ error: 'Stats error' });
+  }
+};
+
+// --- 6. Recent Activity (NEW - REQUIRED FOR DASHBOARD) ---
+export const getRecentActivity = async (req, res) => {
+  try {
+    // We will fake "activity" by showing the latest users who joined
+    // This prevents the frontend from crashing if you don't have an activity log table
+    const query = `
+      SELECT 
+        u.email as user_name,
+        u.role as user_role,
+        'User Joined' as action,
+        'Info' as type,
+        u.created_at
+      FROM Users u
+      ORDER BY u.created_at DESC
+      LIMIT 5
+    `;
+    const [activities] = await db.query(query);
+    res.json({ activities });
+  } catch (error) {
+    console.error('Error fetching activity:', error);
+    res.status(500).json({ error: 'Activity error' });
   }
 };
