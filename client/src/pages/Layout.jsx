@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { LogOut, Menu, X, ChevronDown, LayoutDashboard, Package, Truck, BarChart, FileText, Users, ShoppingBag, Factory, ClipboardList, Thermometer, ShieldCheck, User, LifeBuoy, Lock, AlertTriangle, History, MapPin, Receipt, FlaskConical, Settings } from 'lucide-react';
+import { LogOut, Menu, X, ChevronDown, LayoutDashboard, Package, Truck, BarChart, FileText, Users, ShoppingBag, Factory, ClipboardList, Thermometer, ShieldCheck, User, LifeBuoy, Lock, AlertTriangle, History, MapPin, Receipt, FlaskConical, Settings, Link, Database } from 'lucide-react';
 
 const Layout = ({ children, user }) => {
   const navigate = useNavigate();
@@ -8,7 +8,12 @@ const Layout = ({ children, user }) => {
   const [isSidebarOpen, setIsSidebarOpen] = useState(true); // Renamed for clarity
   const [userMenuOpen, setUserMenuOpen] = useState(false);
 
-  const isActive = (path) => location.pathname === path;
+  const isActive = (path) => {
+    if (path.includes('?')) {
+      return location.pathname + location.search === path;
+    }
+    return location.pathname === path;
+  };
 
   // Define menu items based on roles
   const commonMenuItems = [
@@ -51,9 +56,10 @@ const Layout = ({ children, user }) => {
   ];
 
   const adminMenuItems = [
-    { label: 'Dashboard', path: '/admin/dashboard', icon: <LayoutDashboard size={20} /> },
-    { label: 'User Management', path: '/admin/users', icon: <Users size={20} /> },
-    { label: 'System Analytics', path: '/admin/analytics', icon: <BarChart size={20} /> },
+    { label: 'Users Monitor', path: '/admin/dashboard?tab=users', icon: <Users size={20} /> },
+    { label: 'Network Map', path: '/admin/dashboard?tab=connections', icon: <Link size={20} /> },
+    { label: 'System Alerts', path: '/admin/dashboard?tab=alerts', icon: <AlertTriangle size={20} /> },
+    { label: 'Database', path: '/admin/dashboard?tab=database', icon: <Database size={20} /> },
     { label: 'Settings', path: '/admin/settings', icon: <Settings size={20} /> },
   ];
 

@@ -98,3 +98,59 @@ export const getSystemAlerts = async (req, res) => {
     res.status(500).json({ message: 'Server error fetching alerts' });
   }
 };
+
+
+export const getUserDetails = async (req, res) => {
+  const { id } = req.params;
+  try {
+    // 1. Fetch basic info from Users table (Exclude 'name'/'username' as they don't exist)
+    const [users] = await db.query(
+      `SELECT user_id, email, role, created_at 
+       FROM Users WHERE user_id = ?`, 
+      [id]
+    );
+
+    if (users.length === 0) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+
+    const user = users[0];
+    let details = {};
+    let displayName = 'N/A';
+
+    // 2. Fetch details from the specific role table
+    const role = user.role.toLowerCase();
+
+    if (role === 'manufacturer') {
+      const [m] = await db.query('SELECT * FROM Manufacturers WHERE manufacturer_id = ?', [id]);
+      if (m.length > 0) {
+        details = m[0];
+        displayName = details.company_name;
+      }
+    } else if (role === 'retailer') {
+      const [r] = await db.query('SELECT * FROM Retailers WHERE retailer_id = ?', [id]);
+      if (r.length > 0) {
+        details = r[0];
+        displayName = details.business_name;
+      }
+    } else if (role === 'customer') {
+      const [c] = await db.query('SELECT * FROM Customers WHERE customer_id = ?', [id]);
+      if (c.length > 0) {
+        details = c[0];
+        displayName = `${details.first_name} ${details.last_name}`;
+      }
+    }
+
+    // 3. Combine data and map fields for the Frontend
+    res.json({ 
+      ...user, 
+      ...details, 
+      username: displayName,           // Send 'username' so the Modal displays the name correctly
+      is_verified: user.status === 'active' // Ensure the verify button logic works
+    });
+
+  } catch (error) {
+    console.error("Error fetching user details:", error);
+    res.status(500).json({ error: error.message });
+  }
+};
