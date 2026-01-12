@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import Layout from '../Layout';
-import { Archive, Search, Package, MapPin, AlertTriangle, X, Info } from 'lucide-react';
+import { Archive, Search, Package, MapPin, AlertTriangle, X, Info, QrCode, Calendar, Hash, ChevronDown, ChevronUp } from 'lucide-react';
 import { retailerMenuItems } from './menu';
 
 const API_BASE = 'http://localhost:5000/api/retailer';
@@ -255,6 +255,10 @@ const Inventory = () => {
                         <span className="font-mono text-sm">{selectedItem.inventory_id}</span>
                       </div>
                       <div className="flex justify-between">
+                        <span className="text-slate-400 text-sm">Manufacturer</span>
+                        <span className="text-sm">{selectedItem.manufacturer_name || 'N/A'}</span>
+                      </div>
+                      <div className="flex justify-between">
                         <span className="text-slate-400 text-sm">Last Updated</span>
                         <span className="text-sm">
                           {selectedItem.last_updated 
@@ -264,6 +268,73 @@ const Inventory = () => {
                       </div>
                     </div>
                   </div>
+
+                  {/* Batches Information */}
+                  {selectedItem.batches && selectedItem.batches.length > 0 && (
+                    <div className="bg-blue-50 rounded-xl p-4">
+                      <h4 className="font-bold text-sm mb-3 flex items-center gap-2">
+                        <Hash size={16} className="text-blue-500" /> Batch Information
+                      </h4>
+                      <div className="space-y-3">
+                        {selectedItem.batches.map((batch, idx) => (
+                          <div key={batch.batch_id} className="bg-white rounded-lg p-3 border border-blue-100">
+                            <div className="flex justify-between items-start mb-2">
+                              <span className="font-mono font-bold text-blue-700">{batch.batch_number}</span>
+                              <span className={`px-2 py-0.5 text-xs font-bold rounded-full ${batch.status === 'Active' ? 'bg-green-100 text-green-700' : 'bg-slate-100 text-slate-600'}`}>
+                                {batch.status}
+                              </span>
+                            </div>
+                            <div className="grid grid-cols-2 gap-2 text-xs">
+                              <div>
+                                <span className="text-slate-400">Mfg Date: </span>
+                                <span>{new Date(batch.manufacturing_date).toLocaleDateString()}</span>
+                              </div>
+                              <div>
+                                <span className="text-slate-400">Expiry: </span>
+                                <span className={new Date(batch.expiry_date) < new Date() ? 'text-red-600 font-bold' : ''}>
+                                  {new Date(batch.expiry_date).toLocaleDateString()}
+                                </span>
+                              </div>
+                              <div>
+                                <span className="text-slate-400">Total Items: </span>
+                                <span>{batch.total_items}</span>
+                              </div>
+                              <div>
+                                <span className="text-slate-400">Available: </span>
+                                <span className="text-green-600 font-bold">{batch.available_items || 0}</span>
+                              </div>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Serial Codes for Verification */}
+                  {selectedItem.serial_codes && selectedItem.serial_codes.length > 0 && (
+                    <div className="bg-emerald-50 rounded-xl p-4">
+                      <h4 className="font-bold text-sm mb-3 flex items-center gap-2">
+                        <QrCode size={16} className="text-emerald-500" /> Serial Codes (for verification)
+                      </h4>
+                      <p className="text-xs text-slate-500 mb-3">These serial codes can be used by customers to verify product authenticity</p>
+                      <div className="max-h-48 overflow-y-auto space-y-2">
+                        {selectedItem.serial_codes.map((item, idx) => (
+                          <div key={item.item_id} className="bg-white rounded-lg p-2 border border-emerald-100 flex justify-between items-center">
+                            <div>
+                              <span className="font-mono text-sm font-bold text-emerald-700">{item.serial_code}</span>
+                              <p className="text-xs text-slate-400">Batch: {item.batch_number}</p>
+                            </div>
+                            <span className="px-2 py-0.5 text-xs font-bold rounded-full bg-green-100 text-green-700">
+                              {item.status?.replace('_', ' ')}
+                            </span>
+                          </div>
+                        ))}
+                      </div>
+                      {selectedItem.serial_codes.length >= 50 && (
+                        <p className="text-xs text-slate-400 mt-2 text-center">Showing first 50 serial codes</p>
+                      )}
+                    </div>
+                  )}
 
                   {/* Low Stock Warning */}
                   {selectedItem.quantity_on_hand < 10 && selectedItem.quantity_on_hand > 0 && (

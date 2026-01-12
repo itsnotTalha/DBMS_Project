@@ -157,8 +157,10 @@ export const verifyProductAuthenticated = async (req, res) => {
       return res.status(400).json({ verified: false, error: 'Serial code is required' });
     }
 
-    // Get product item with all related data
-    const [[productItem]] = await db.query(
+    const code = serial_code.trim();
+
+    // First, try to find as a serial code (exact match)
+    let [[productItem]] = await db.query(
       `SELECT 
         pi.item_id, pi.serial_code, pi.authentication_hash, pi.status, pi.created_at,
         b.batch_id, b.batch_number, b.manufacturing_date, b.expiry_date, b.status as batch_status,
@@ -170,8 +172,62 @@ export const verifyProductAuthenticated = async (req, res) => {
        JOIN Product_Definitions pd ON b.product_def_id = pd.product_def_id
        JOIN Manufacturers m ON pd.manufacturer_id = m.manufacturer_id
        WHERE pi.serial_code = ?`,
-      [serial_code]
+      [code]
     );
+
+    // If not found as serial code, try to find as batch number
+    if (!productItem) {
+      const [[batchInfo]] = await db.query(
+        `SELECT 
+          b.batch_id, b.batch_number, b.manufacturing_date, b.expiry_date, b.status as batch_status,
+          pd.product_def_id, pd.name as product_name, pd.description, pd.category, 
+          pd.base_price, pd.image_url,
+          m.manufacturer_id, m.company_name as manufacturer_name, m.license_number,
+          (SELECT COUNT(*) FROM Product_Items WHERE batch_id = b.batch_id) as total_items,
+          (SELECT pi.serial_code FROM Product_Items pi WHERE pi.batch_id = b.batch_id LIMIT 1) as sample_serial
+         FROM Batches b
+         JOIN Product_Definitions pd ON b.product_def_id = pd.product_def_id
+         JOIN Manufacturers m ON pd.manufacturer_id = m.manufacturer_id
+         WHERE b.batch_number = ?`,
+        [code]
+      );
+
+      if (batchInfo) {
+        // Found as batch number - return batch info
+        const isExpired = new Date(batchInfo.expiry_date) < new Date();
+
+        // Log batch scan
+        await db.query(
+          `INSERT INTO QR_Scan_Logs (serial_code, scanned_by_user, scan_result) VALUES (?, ?, 'Valid')`,
+          [code, customerId]
+        ).catch(() => {});
+
+        return res.json({
+          verified: true,
+          status: isExpired ? 'expired' : 'authentic',
+          is_batch: true,
+          product: {
+            batch_number: batchInfo.batch_number,
+            name: batchInfo.product_name,
+            description: batchInfo.description,
+            category: batchInfo.category,
+            price: batchInfo.base_price,
+            image_url: batchInfo.image_url,
+            manufacturer: batchInfo.manufacturer_name,
+            license_number: batchInfo.license_number,
+            manufacturing_date: batchInfo.manufacturing_date,
+            expiry_date: batchInfo.expiry_date,
+            batch_status: batchInfo.batch_status,
+            total_items: batchInfo.total_items,
+            sample_serial: batchInfo.sample_serial,
+            is_expired: isExpired
+          },
+          timeline: [],
+          verified_at: new Date().toISOString(),
+          message: `This is a valid batch containing ${batchInfo.total_items} items. For individual item verification, use the full serial code (e.g., ${batchInfo.sample_serial || batchInfo.batch_number + '-0001'}).`
+        });
+      }
+    }
 
     // Check if product is expired
     const isExpired = productItem ? new Date(productItem.expiry_date) < new Date() : false;
@@ -180,14 +236,15 @@ export const verifyProductAuthenticated = async (req, res) => {
       // Log failed scan
       await db.query(
         `INSERT INTO QR_Scan_Logs (serial_code, scanned_by_user, scan_result) VALUES (?, ?, 'Fake')`,
-        [serial_code, customerId]
+        [code, customerId]
       ).catch(() => {});
 
       return res.json({
         verified: false,
         status: 'fake',
-        error: 'Product not found in database',
-        serial_code
+        error: 'Product not found in database. Please check the code and try again.',
+        serial_code: code,
+        hint: 'Serial codes typically look like: BATCH-YYYYMMDD-XXXX-0001'
       });
     }
 

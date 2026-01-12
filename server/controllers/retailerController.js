@@ -323,13 +323,44 @@ export const getRetailerInventory = async (req, res) => {
     const [inventory] = await db.query(
       `SELECT i.inventory_id, i.product_def_id, pd.name as productName, 
               pd.base_price, pd.category,
-              i.quantity_on_hand, i.aisle, i.shelf, i.section, i.last_updated
+              i.quantity_on_hand, i.aisle, i.shelf, i.section, i.last_updated,
+              m.company_name as manufacturer_name
        FROM Inventory i
        JOIN Product_Definitions pd ON i.product_def_id = pd.product_def_id
+       JOIN Manufacturers m ON pd.manufacturer_id = m.manufacturer_id
        WHERE i.outlet_id = ?
        ORDER BY pd.name ASC`,
       [outlet.outlet_id]
     );
+
+    // For each inventory item, get associated batches and serial codes
+    for (const item of inventory) {
+      // Get batches for this product
+      const [batches] = await db.query(
+        `SELECT b.batch_id, b.batch_number, b.manufacturing_date, b.expiry_date, b.status,
+                COUNT(pi.item_id) as total_items,
+                SUM(CASE WHEN pi.status = 'In_Inventory' THEN 1 ELSE 0 END) as available_items
+         FROM Batches b
+         LEFT JOIN Product_Items pi ON b.batch_id = pi.batch_id
+         WHERE b.product_def_id = ? AND b.status IN ('Active', 'Completed')
+         GROUP BY b.batch_id
+         ORDER BY b.manufacturing_date DESC`,
+        [item.product_def_id]
+      );
+      item.batches = batches;
+
+      // Get serial codes that are in inventory for this product
+      const [serialCodes] = await db.query(
+        `SELECT pi.item_id, pi.serial_code, pi.status, b.batch_number, b.expiry_date
+         FROM Product_Items pi
+         JOIN Batches b ON pi.batch_id = b.batch_id
+         WHERE b.product_def_id = ? AND pi.status = 'In_Inventory'
+         ORDER BY pi.created_at DESC
+         LIMIT 50`,
+        [item.product_def_id]
+      );
+      item.serial_codes = serialCodes;
+    }
 
     res.json({
       inventory,

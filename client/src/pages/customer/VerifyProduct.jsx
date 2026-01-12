@@ -87,6 +87,10 @@ const VerifyProduct = () => {
     if (result.status === 'expired') {
       return <AlertTriangle className="w-16 h-16 text-orange-500" />;
     }
+
+    if (result.is_batch) {
+      return <Package className="w-16 h-16 text-blue-500" />;
+    }
     
     return <CheckCircle className="w-16 h-16 text-green-500" />;
   };
@@ -97,7 +101,7 @@ const VerifyProduct = () => {
     if (!result.verified) {
       return {
         title: 'Product Not Verified',
-        subtitle: 'This product could not be found in our database',
+        subtitle: result.hint || 'This product could not be found in our database',
         color: 'text-red-600',
         bgColor: 'bg-red-50'
       };
@@ -109,6 +113,15 @@ const VerifyProduct = () => {
         subtitle: 'This product has passed its expiry date',
         color: 'text-orange-600',
         bgColor: 'bg-orange-50'
+      };
+    }
+
+    if (result.is_batch) {
+      return {
+        title: 'Batch Verified',
+        subtitle: result.message || 'This batch is verified and genuine',
+        color: 'text-blue-600',
+        bgColor: 'bg-blue-50'
       };
     }
     
@@ -149,7 +162,7 @@ const VerifyProduct = () => {
                 value={serialCode}
                 onChange={(e) => setSerialCode(e.target.value)}
                 onKeyDown={(e) => e.key === 'Enter' && handleVerify()}
-                placeholder="Enter product serial code (e.g., SN-12345678)"
+                placeholder="Enter batch or serial code (e.g., BATCH-20260112-1234 or BATCH-20260112-1234-0001)"
                 className="w-full pl-12 pr-4 py-3 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
               />
             </div>
@@ -189,7 +202,7 @@ const VerifyProduct = () => {
             <div className={`${statusInfo.bgColor} rounded-xl p-6 border`}>
               <div className="flex items-center gap-4">
                 {getStatusIcon()}
-                <div>
+                <div className="flex-1">
                   <h3 className={`text-xl font-bold ${statusInfo.color}`}>{statusInfo.title}</h3>
                   <p className="text-slate-600">{statusInfo.subtitle}</p>
                   <p className="text-xs text-slate-400 mt-1">
@@ -197,6 +210,28 @@ const VerifyProduct = () => {
                   </p>
                 </div>
               </div>
+              
+              {/* Batch-specific info */}
+              {result.is_batch && result.product && (
+                <div className="mt-4 pt-4 border-t border-blue-200 grid grid-cols-2 sm:grid-cols-3 gap-4">
+                  <div>
+                    <p className="text-xs text-slate-500">Total Items in Batch</p>
+                    <p className="font-bold text-lg text-blue-700">{result.product.total_items}</p>
+                  </div>
+                  <div>
+                    <p className="text-xs text-slate-500">Batch Status</p>
+                    <span className={`inline-block px-2 py-0.5 text-xs font-bold rounded-full ${result.product.batch_status === 'Active' ? 'bg-green-100 text-green-700' : 'bg-slate-100 text-slate-600'}`}>
+                      {result.product.batch_status}
+                    </span>
+                  </div>
+                  {result.product.sample_serial && (
+                    <div className="col-span-2 sm:col-span-1">
+                      <p className="text-xs text-slate-500">Sample Serial Code</p>
+                      <p className="font-mono text-sm text-slate-700">{result.product.sample_serial}</p>
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
 
             {/* Product Details */}
