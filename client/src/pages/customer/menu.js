@@ -7,6 +7,7 @@ import {
   Flag,
   User,
   HelpCircle,
+  Settings,
 } from 'lucide-react';
 
 export const customerMenuItems = [
@@ -44,5 +45,10 @@ export const customerMenuItems = [
     icon: React.createElement(HelpCircle, { size: 18 }),
     label: 'Help & FAQs',
     path: '/customer/help',
+  },
+  {
+    icon: React.createElement(Settings, { size: 18 }),
+    label: 'Settings',
+    path: '/customer/settings',
   },
 ];

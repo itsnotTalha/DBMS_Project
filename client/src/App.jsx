@@ -28,9 +28,14 @@ import RetailerSettings from './pages/retailer/Settings';
 
 // Customer Pages
 import CustomerDashboard from './pages/customer/Dashboard';
+import CustomerSettings from './pages/customer/Settings';
 
 // Admin Pages
 import AdminDashboard from './pages/admin/Dashboard';
+import AdminSettings from './pages/admin/Settings';
+
+// Manufacturer Settings
+import ManufacturerSettings from './pages/manufacturer/Settings';
 
 // --- NEW COMPONENT: DECIDES WHERE TO GO ---
 const RootRedirect = () => {
@@ -75,6 +80,7 @@ function App() {
         <Route path="/manufacturer/iot-alerts" element={<ManufacturerIoTAlerts />} />
         <Route path="/manufacturer/ledger-audit" element={<ManufacturerLedgerAudit />} />
         <Route path="/manufacturer/orders" element={<ManufacturerOrders />} />
+        <Route path="/manufacturer/settings" element={<ManufacturerSettings />} />
 
         {/* Retailer Routes */}
         <Route path="/retailer/dashboard" element={<RetailerDashboard />} />
@@ -89,9 +95,11 @@ function App() {
 
         {/* Customer Routes */}
         <Route path="/customer/dashboard" element={<CustomerDashboard />} />
+        <Route path="/customer/settings" element={<CustomerSettings />} />
 
         {/* Admin Routes */}
         <Route path="/admin/dashboard" element={<AdminDashboard />} />
+        <Route path="/admin/settings" element={<AdminSettings />} />
 
         {/* Default Route */}
         <Route path="/" element={<LandingPage />} />

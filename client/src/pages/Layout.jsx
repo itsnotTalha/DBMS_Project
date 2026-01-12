@@ -183,7 +183,11 @@ const Layout = ({ children, user }) => {
                   <button
                     onClick={() => {
                       setUserMenuOpen(false);
-                      navigate('/settings');
+                      // Navigate to role-specific settings
+                      const role = user?.role?.toLowerCase();
+                      if (role) {
+                        navigate(`/${role}/settings`);
+                      }
                     }}
                     className="w-full text-left px-4 py-2 text-sm text-slate-700 hover:bg-slate-50 transition"
                   >

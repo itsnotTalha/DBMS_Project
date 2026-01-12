@@ -7,6 +7,7 @@ import {
   ShieldCheck,
   Package,
   ClipboardList,
+  Settings,
 } from 'lucide-react';
 
 export const manufacturerMenuItems = [
@@ -44,5 +45,10 @@ export const manufacturerMenuItems = [
     icon: React.createElement(ShieldCheck, { size: 18 }),
     label: 'Ledger Audit',
     path: '/manufacturer/ledger-audit',
+  },
+  {
+    icon: React.createElement(Settings, { size: 18 }),
+    label: 'Settings',
+    path: '/manufacturer/settings',
   },
 ];
