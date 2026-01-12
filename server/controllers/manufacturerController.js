@@ -79,6 +79,7 @@ export const getProducts = async (req, res) => {
 
 export const addProduct = async (req, res) => {
     try {
+        console.log('DEBUG: Logged in User:', req.user);
         const { name, description, category, base_price, image_url } = req.body;
 
         if (!name || !base_price) {
