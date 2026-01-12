@@ -9,7 +9,7 @@ const connection = mysql.createConnection({
     host: 'localhost',
     user: 'root',
     password: '1234', // Put your DB password here
-    database: 'supply_chain_db' // Ensure this matches your DB name
+    database: 'supply_chain_db3' // Ensure this matches your DB name
 });
 
 const seedAdmin = async () => {
