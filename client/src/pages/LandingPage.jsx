@@ -1,9 +1,9 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import { 
   Search, ShieldCheck, Lock, ShoppingCart, X, Plus, Minus, 
-  Trash2, ChevronRight, Package, Truck, CheckCircle,
+  Trash2, ChevronRight, ChevronLeft, Package, Truck, CheckCircle,
   Filter, Loader2, Pill, Smartphone, Apple, Shirt, Heart,
   Sparkles, Car, Home, Dumbbell, BookOpen, Gift, Box, Store
 } from 'lucide-react';
@@ -45,6 +45,10 @@ const CategoryIcon = ({ category, size = 24, className = "" }) => {
 const LandingPage = () => {
   const navigate = useNavigate();
   
+  // Refs for scrolling
+  const productScrollRef = useRef(null);
+  const manufacturerScrollRef = useRef(null);
+
   // State
   const [products, setProducts] = useState([]);
   const [categories, setCategories] = useState([]);
@@ -116,10 +120,18 @@ const LandingPage = () => {
     }
   };
 
+  // Generic Scroll Function
+  const scroll = (ref, direction) => {
+    if (ref.current) {
+      const { current } = ref;
+      const scrollAmount = direction === 'left' ? -320 : 320;
+      current.scrollBy({ left: scrollAmount, behavior: 'smooth' });
+    }
+  };
+
   // Cart functions
   const addToCart = (product) => {
     setCart(prev => {
-      // Use inventory_id as unique identifier
       const existing = prev.find(item => item.inventory_id === product.inventory_id);
       if (existing) {
         return prev.map(item =>
@@ -339,40 +351,99 @@ const LandingPage = () => {
             <p className="text-slate-400 text-sm">Try adjusting your search or filter</p>
           </div>
         ) : (
-          /* Horizontal Scroll Container */
-          <div className="flex overflow-x-auto gap-5 pb-8 px-1 scrollbar-hide snap-x snap-mandatory">
-            {products.map(product => (
-              <div 
-                key={product.inventory_id || product.product_def_id} // Unique Key
-                className="min-w-[300px] w-[300px] flex-shrink-0 snap-center" // Fixed Width
-              >
-                <ProductCard 
-                  product={product} 
-                  onAddToCart={addToCart}
-                  onViewDetails={() => setSelectedProduct(product)}
-                />
-              </div>
-            ))}
+          <div className="relative group">
+            {/* Left Scroll Button */}
+            <button
+              onClick={() => scroll(productScrollRef, 'left')}
+              className="absolute left-0 top-1/2 -translate-y-1/2 -ml-4 z-10 w-10 h-10 bg-white rounded-full shadow-lg border border-slate-100 flex items-center justify-center text-slate-600 hover:text-emerald-600 hover:scale-110 transition-all opacity-0 group-hover:opacity-100 hidden md:flex"
+              aria-label="Scroll left"
+            >
+              <ChevronLeft className="w-6 h-6" />
+            </button>
+
+            {/* Horizontal Scroll Container */}
+            <div 
+              ref={productScrollRef}
+              className="flex overflow-x-auto gap-5 pb-8 px-1 scrollbar-hide snap-x snap-mandatory"
+            >
+              {products.map(product => (
+                <div 
+                  key={product.inventory_id || product.product_def_id}
+                  className="min-w-[300px] w-[300px] flex-shrink-0 snap-center"
+                >
+                  <ProductCard 
+                    product={product} 
+                    onAddToCart={addToCart}
+                    onViewDetails={() => setSelectedProduct(product)}
+                  />
+                </div>
+              ))}
+            </div>
+
+            {/* Right Scroll Button */}
+            <button
+              onClick={() => scroll(productScrollRef, 'right')}
+              className="absolute right-0 top-1/2 -translate-y-1/2 -mr-4 z-10 w-10 h-10 bg-white rounded-full shadow-lg border border-slate-100 flex items-center justify-center text-slate-600 hover:text-emerald-600 hover:scale-110 transition-all opacity-0 group-hover:opacity-100 hidden md:flex"
+              aria-label="Scroll right"
+            >
+              <ChevronRight className="w-6 h-6" />
+            </button>
           </div>
         )}
       </div>
 
-      {/* Featured Manufacturers */}
+      {/* Featured Manufacturers - Scrollable */}
       {manufacturers.length > 0 && (
         <div className="bg-white py-12 border-t border-slate-100">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <h2 className="text-2xl font-bold text-slate-900 mb-6">Trusted Manufacturers</h2>
-            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4">
-              {manufacturers.map(mfg => (
-                <div key={mfg.manufacturer_id} className="bg-slate-50 rounded-xl p-4 text-center hover:shadow-md transition">
-                  <div className="w-12 h-12 bg-emerald-100 rounded-full flex items-center justify-center mx-auto mb-3">
-                    <ShieldCheck className="w-6 h-6 text-emerald-600" />
+            <div className="flex justify-between items-center mb-8">
+              <h2 className="text-2xl font-bold text-slate-900">Trusted Manufacturers</h2>
+              <Link to="/business" className="text-emerald-600 hover:text-emerald-700 font-medium text-sm flex items-center gap-1">
+                View All <ChevronRight className="w-4 h-4" />
+              </Link>
+            </div>
+            
+            <div className="relative group">
+              {/* Left Scroll Button */}
+              <button
+                onClick={() => scroll(manufacturerScrollRef, 'left')}
+                className="absolute left-0 top-1/2 -translate-y-1/2 -ml-4 z-10 w-10 h-10 bg-white rounded-full shadow-lg border border-slate-100 flex items-center justify-center text-slate-600 hover:text-emerald-600 hover:scale-110 transition-all opacity-0 group-hover:opacity-100 hidden md:flex"
+                aria-label="Scroll left"
+              >
+                <ChevronLeft className="w-6 h-6" />
+              </button>
+
+              {/* Manufacturers Scroll Container */}
+              <div 
+                ref={manufacturerScrollRef}
+                className="flex overflow-x-auto gap-6 pb-4 scrollbar-hide snap-x snap-mandatory"
+              >
+                {manufacturers.map(mfg => (
+                  <div 
+                    key={mfg.manufacturer_id} 
+                    className="min-w-[180px] sm:min-w-[220px] flex-shrink-0 snap-center bg-slate-50 rounded-2xl p-6 text-center hover:shadow-lg hover:-translate-y-1 transition-all duration-300 border border-slate-100"
+                  >
+                    <div className="w-16 h-16 bg-emerald-100 rounded-full flex items-center justify-center mx-auto mb-4 shadow-inner">
+                      <ShieldCheck className="w-8 h-8 text-emerald-600" />
+                    </div>
+                    <h3 className="font-bold text-slate-900 text-sm mb-1">{mfg.company_name}</h3>
+                    <p className="text-xs text-slate-500 mb-2">{mfg.product_count} products</p>
+                    <div className="inline-flex items-center gap-1 bg-white px-2 py-1 rounded-full border border-slate-200">
+                      <span className="w-1.5 h-1.5 bg-emerald-500 rounded-full"></span>
+                      <p className="text-[10px] text-slate-600 font-medium">Verified</p>
+                    </div>
                   </div>
-                  <h3 className="font-semibold text-slate-900 text-sm">{mfg.company_name}</h3>
-                  <p className="text-xs text-slate-500 mt-1">{mfg.product_count} products</p>
-                  <p className="text-xs text-emerald-600 mt-1">✓ Verified</p>
-                </div>
-              ))}
+                ))}
+              </div>
+
+              {/* Right Scroll Button */}
+              <button
+                onClick={() => scroll(manufacturerScrollRef, 'right')}
+                className="absolute right-0 top-1/2 -translate-y-1/2 -mr-4 z-10 w-10 h-10 bg-white rounded-full shadow-lg border border-slate-100 flex items-center justify-center text-slate-600 hover:text-emerald-600 hover:scale-110 transition-all opacity-0 group-hover:opacity-100 hidden md:flex"
+                aria-label="Scroll right"
+              >
+                <ChevronRight className="w-6 h-6" />
+              </button>
             </div>
           </div>
         </div>
