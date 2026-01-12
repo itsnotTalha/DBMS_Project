@@ -947,6 +947,7 @@ export const getAlerts = async (req, res) => {
 
 // ============================================
 // GET CUSTOMER ORDERS (For Retailer to manage)
+// Enhanced with inventory availability check
 // ============================================
 export const getCustomerOrdersForRetailer = async (req, res) => {
   try {
@@ -959,7 +960,7 @@ export const getCustomerOrdersForRetailer = async (req, res) => {
     );
 
     if (!outlet) {
-      return res.json({ orders: [] });
+      return res.json({ orders: [], stats: { pending: 0, shipped: 0, completed: 0, cancelled: 0 } });
     }
 
     const [orders] = await db.query(`
@@ -983,23 +984,40 @@ export const getCustomerOrdersForRetailer = async (req, res) => {
       ORDER BY co.order_date DESC
     `, [outlet.outlet_id]);
 
-    // Get items for each order
+    // Get items for each order WITH inventory availability
     for (const order of orders) {
       const [items] = await db.query(`
         SELECT 
+          oi.order_item_id,
+          oi.product_def_id,
           oi.quantity,
           oi.unit_price,
           pd.name,
           pd.category,
-          pd.image_url
+          pd.image_url,
+          COALESCE(i.quantity_on_hand, 0) as available_qty,
+          CASE WHEN COALESCE(i.quantity_on_hand, 0) >= oi.quantity THEN 1 ELSE 0 END as in_stock
         FROM Order_Items oi
         JOIN Product_Definitions pd ON oi.product_def_id = pd.product_def_id
+        LEFT JOIN Inventory i ON i.product_def_id = oi.product_def_id AND i.outlet_id = ?
         WHERE oi.order_id = ?
-      `, [order.order_id]);
+      `, [outlet.outlet_id, order.order_id]);
       order.items = items;
+      
+      // Calculate if order can be fully fulfilled
+      order.can_fulfill = items.every(item => item.in_stock === 1);
+      order.insufficient_items = items.filter(item => item.in_stock === 0).map(item => item.name);
     }
 
-    res.json({ orders });
+    // Calculate stats
+    const stats = {
+      pending: orders.filter(o => o.status === 'Processing').length,
+      shipped: orders.filter(o => o.status === 'Out_for_Delivery').length,
+      completed: orders.filter(o => o.status === 'Completed').length,
+      cancelled: orders.filter(o => o.status === 'Cancelled').length
+    };
+
+    res.json({ orders, stats });
   } catch (error) {
     console.error('Get customer orders for retailer error:', error);
     res.status(500).json({ error: error.message });
@@ -1007,13 +1025,117 @@ export const getCustomerOrdersForRetailer = async (req, res) => {
 };
 
 // ============================================
-// SHIP CUSTOMER ORDER (renamed from accept - now goes directly to shipping)
-// Retailer ships the order, changes status to Out_for_Delivery
+// APPROVE CUSTOMER ORDER
+// Retailer approves the order, verifies inventory, deducts stock, ships order
 // ============================================
 export const acceptCustomerOrder = async (req, res) => {
+  const connection = await db.getConnection();
+  
+  try {
+    await connection.beginTransaction();
+    
+    const retailerId = req.user.id;
+    const { orderId } = req.params;
+
+    // Verify this order belongs to retailer's outlet
+    const [[order]] = await connection.query(`
+      SELECT co.order_id, co.status, co.outlet_id
+      FROM Customer_Orders co
+      JOIN Retailer_Outlets ro ON co.outlet_id = ro.outlet_id
+      WHERE co.order_id = ? AND ro.retailer_id = ?
+    `, [orderId, retailerId]);
+
+    if (!order) {
+      throw new Error('Order not found or access denied');
+    }
+
+    if (order.status !== 'Processing') {
+      throw new Error(`Cannot approve order with status: ${order.status}`);
+    }
+
+    // Get order items and verify inventory
+    const [items] = await connection.query(`
+      SELECT 
+        oi.order_item_id,
+        oi.product_def_id,
+        oi.quantity,
+        pd.name,
+        COALESCE(i.quantity_on_hand, 0) as available_qty,
+        i.inventory_id
+      FROM Order_Items oi
+      JOIN Product_Definitions pd ON oi.product_def_id = pd.product_def_id
+      LEFT JOIN Inventory i ON i.product_def_id = oi.product_def_id AND i.outlet_id = ?
+      WHERE oi.order_id = ?
+    `, [order.outlet_id, orderId]);
+
+    // Check if all items are in stock
+    const insufficientItems = items.filter(item => item.available_qty < item.quantity);
+    if (insufficientItems.length > 0) {
+      const itemNames = insufficientItems.map(i => `${i.name} (need ${i.quantity}, have ${i.available_qty})`).join(', ');
+      throw new Error(`Insufficient stock for: ${itemNames}`);
+    }
+
+    // Deduct inventory for each item
+    for (const item of items) {
+      await connection.query(
+        'UPDATE Inventory SET quantity_on_hand = quantity_on_hand - ? WHERE inventory_id = ?',
+        [item.quantity, item.inventory_id]
+      );
+    }
+
+    // Generate tracking number
+    const trackingNum = `TRK${Date.now()}${Math.random().toString(36).substr(2, 5).toUpperCase()}`;
+
+    // Create delivery record
+    const estimatedArrival = new Date();
+    estimatedArrival.setDate(estimatedArrival.getDate() + 3);
+
+    await connection.query(
+      `INSERT INTO Deliveries (order_id, tracking_number, status, estimated_arrival) VALUES (?, ?, 'Dispatched', ?)`,
+      [orderId, trackingNum, estimatedArrival]
+    );
+
+    // Update order status to Out_for_Delivery
+    await connection.query(
+      'UPDATE Customer_Orders SET status = ? WHERE order_id = ?',
+      ['Out_for_Delivery', orderId]
+    );
+
+    await connection.commit();
+
+    // Check for low stock alerts after deduction
+    const [lowStockItems] = await db.query(
+      `SELECT pd.name, i.quantity_on_hand 
+       FROM Inventory i 
+       JOIN Product_Definitions pd ON i.product_def_id = pd.product_def_id
+       WHERE i.outlet_id = ? AND i.quantity_on_hand < 10 AND i.quantity_on_hand > 0`,
+      [order.outlet_id]
+    );
+
+    res.json({ 
+      message: 'Order approved and shipped successfully', 
+      orderId,
+      tracking_number: trackingNum,
+      low_stock_alert: lowStockItems.length > 0 ? lowStockItems : null
+    });
+  } catch (error) {
+    await connection.rollback();
+    console.error('Accept customer order error:', error);
+    res.status(400).json({ error: error.message });
+  } finally {
+    connection.release();
+  }
+};
+
+// ============================================
+// REJECT CUSTOMER ORDER
+// Retailer rejects the order with a reason
+// ============================================
+export const rejectCustomerOrder = async (req, res) => {
   try {
     const retailerId = req.user.id;
     const { orderId } = req.params;
+    const { reason } = req.body;
 
     // Verify this order belongs to retailer's outlet
     const [[order]] = await db.query(`
@@ -1028,81 +1150,77 @@ export const acceptCustomerOrder = async (req, res) => {
     }
 
     if (order.status !== 'Processing') {
-      return res.status(400).json({ error: `Cannot process order with status: ${order.status}` });
+      return res.status(400).json({ error: `Cannot reject order with status: ${order.status}` });
     }
 
-    // Update order status to Out_for_Delivery
+    // Update order status to Cancelled
     await db.query(
       'UPDATE Customer_Orders SET status = ? WHERE order_id = ?',
-      ['Out_for_Delivery', orderId]
+      ['Cancelled', orderId]
     );
 
-    res.json({ message: 'Order marked for delivery', orderId });
+    res.json({ message: 'Order rejected', orderId, reason: reason || 'No reason provided' });
   } catch (error) {
-    console.error('Accept customer order error:', error);
+    console.error('Reject customer order error:', error);
     res.status(500).json({ error: error.message });
   }
 };
 
 // ============================================
-// SHIP CUSTOMER ORDER
-// Retailer marks order as shipped, creates delivery record
+// GET PENDING ORDERS ONLY
+// For quick access to orders needing approval
 // ============================================
-export const shipCustomerOrder = async (req, res) => {
+export const getPendingCustomerOrders = async (req, res) => {
   try {
     const retailerId = req.user.id;
-    const { orderId } = req.params;
-    const { tracking_number, estimated_days = 3 } = req.body;
 
-    // Verify this order belongs to retailer's outlet
-    const [[order]] = await db.query(`
-      SELECT co.order_id, co.status, co.outlet_id
+    const [[outlet]] = await db.query(
+      'SELECT outlet_id FROM Retailer_Outlets WHERE retailer_id = ? LIMIT 1',
+      [retailerId]
+    );
+
+    if (!outlet) {
+      return res.json({ pending_orders: [] });
+    }
+
+    const [orders] = await db.query(`
+      SELECT 
+        co.order_id,
+        co.order_date,
+        co.total_amount,
+        c.first_name,
+        c.last_name,
+        c.phone_number,
+        u.email as customer_email
       FROM Customer_Orders co
-      JOIN Retailer_Outlets ro ON co.outlet_id = ro.outlet_id
-      WHERE co.order_id = ? AND ro.retailer_id = ?
-    `, [orderId, retailerId]);
+      JOIN Customers c ON co.customer_id = c.customer_id
+      JOIN Users u ON c.customer_id = u.user_id
+      WHERE co.outlet_id = ? AND co.status = 'Processing'
+      ORDER BY co.order_date ASC
+    `, [outlet.outlet_id]);
 
-    if (!order) {
-      return res.status(404).json({ error: 'Order not found or access denied' });
+    // Get items with availability for each order
+    for (const order of orders) {
+      const [items] = await db.query(`
+        SELECT 
+          oi.product_def_id,
+          oi.quantity,
+          oi.unit_price,
+          pd.name as product_name,
+          COALESCE(i.quantity_on_hand, 0) as available_qty,
+          CASE WHEN COALESCE(i.quantity_on_hand, 0) >= oi.quantity THEN 1 ELSE 0 END as in_stock
+        FROM Order_Items oi
+        JOIN Product_Definitions pd ON oi.product_def_id = pd.product_def_id
+        LEFT JOIN Inventory i ON i.product_def_id = oi.product_def_id AND i.outlet_id = ?
+        WHERE oi.order_id = ?
+      `, [outlet.outlet_id, order.order_id]);
+      order.items = items;
+      order.can_fulfill = items.every(item => item.in_stock === 1);
     }
 
-    if (order.status !== 'Processing') {
-      return res.status(400).json({ error: `Cannot ship order with status: ${order.status}` });
-    }
-
-    // Generate tracking number if not provided
-    const trackingNum = tracking_number || `TRK${Date.now()}${Math.random().toString(36).substr(2, 5).toUpperCase()}`;
-
-    // Create or update delivery record
-    const [[existingDelivery]] = await db.query(
-      'SELECT delivery_id FROM Deliveries WHERE order_id = ?',
-      [orderId]
-    );
-
-    const estimatedArrival = new Date();
-    estimatedArrival.setDate(estimatedArrival.getDate() + estimated_days);
-
-    if (existingDelivery) {
-      await db.query(
-        `UPDATE Deliveries SET tracking_number = ?, status = 'Dispatched', estimated_arrival = ? WHERE order_id = ?`,
-        [trackingNum, estimatedArrival, orderId]
-      );
-    } else {
-      await db.query(
-        `INSERT INTO Deliveries (order_id, tracking_number, status, estimated_arrival) VALUES (?, ?, 'Dispatched', ?)`,
-        [orderId, trackingNum, estimatedArrival]
-      );
-    }
-
-    // Update order status
-    await db.query(
-      'UPDATE Customer_Orders SET status = ? WHERE order_id = ?',
-      ['Out_for_Delivery', orderId]
-    );
-
-    res.json({ message: 'Order shipped successfully', tracking_number: trackingNum });
+    res.json({ pending_orders: orders });
   } catch (error) {
-    console.error('Ship customer order error:', error);
+    console.error('Get pending orders error:', error);
     res.status(500).json({ error: error.message });
   }
 };
@@ -1125,5 +1243,6 @@ export default {
   getAlerts,
   getCustomerOrdersForRetailer,
   acceptCustomerOrder,
-  shipCustomerOrder
+  rejectCustomerOrder,
+  getPendingCustomerOrders
 };

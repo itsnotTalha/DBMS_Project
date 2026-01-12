@@ -64,8 +64,9 @@ router.get('/alerts', verifyRetailer, retailerController.getAlerts);
 // CUSTOMER ORDERS MANAGEMENT ROUTES
 // ============================================
 router.get('/customer-orders', verifyRetailer, retailerController.getCustomerOrdersForRetailer);
-router.put('/customer-orders/:orderId/accept', verifyRetailer, retailerController.acceptCustomerOrder);
-router.put('/customer-orders/:orderId/ship', verifyRetailer, retailerController.shipCustomerOrder);
+router.get('/customer-orders/pending', verifyRetailer, retailerController.getPendingCustomerOrders);
+router.put('/customer-orders/:orderId/approve', verifyRetailer, retailerController.acceptCustomerOrder);
+router.put('/customer-orders/:orderId/reject', verifyRetailer, retailerController.rejectCustomerOrder);
 
 // ============================================
 // SEARCH ROUTES

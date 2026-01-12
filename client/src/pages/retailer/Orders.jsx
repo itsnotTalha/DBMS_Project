@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Layout from '../Layout';
-import { Package, Plus, Store } from 'lucide-react';
+import { Package, Plus, Store, ChevronDown, ChevronUp } from 'lucide-react';
 import { retailerMenuItems } from './menu';
 
 const Orders = () => {
@@ -15,6 +15,7 @@ const Orders = () => {
   const [showOrderForm, setShowOrderForm] = useState(false);
   const [loading, setLoading] = useState(true);
   const [placingOrder, setPlacingOrder] = useState(false);
+  const [expandedOrder, setExpandedOrder] = useState(null);
 
   useEffect(() => {
     const storedUser = localStorage.getItem('user') || sessionStorage.getItem('user');
@@ -345,35 +346,62 @@ const Orders = () => {
             <p>No orders found.</p>
           </div>
         ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full">
-              <thead className="bg-slate-50 border-b">
-                <tr>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase">Order ID</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase">Manufacturer</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase">Total</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase">Status</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase">Items</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase">Date</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-200">
-                {orders.map((order) => (
-                  <tr key={order.b2b_order_id} className="hover:bg-slate-50">
-                    <td className="px-6 py-4 font-medium">#{order.b2b_order_id}</td>
-                    <td className="px-6 py-4 text-slate-600">{order.company_name}</td>
-                    <td className="px-6 py-4 font-medium">${parseFloat(order.total_amount || 0).toFixed(2)}</td>
-                    <td className="px-6 py-4">
-                      <span className={`px-2 py-1 text-xs rounded-full ${getStatusClasses(order.status)}`}>
-                        {order.status}
-                      </span>
-                    </td>
-                    <td className="px-6 py-4 text-slate-600">{order.items?.length || 0} items</td>
-                    <td className="px-6 py-4 text-slate-600">{new Date(order.order_date).toLocaleDateString()}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+          <div className="divide-y divide-slate-200">
+            {orders.map((order) => (
+              <div key={order.b2b_order_id}>
+                <div 
+                  className="px-6 py-4 flex items-center justify-between cursor-pointer hover:bg-slate-50"
+                  onClick={() => setExpandedOrder(expandedOrder === order.b2b_order_id ? null : order.b2b_order_id)}
+                >
+                  <div className="flex items-center gap-6">
+                    <span className="font-medium text-slate-900">#{order.b2b_order_id}</span>
+                    <span className="text-slate-600">{order.company_name}</span>
+                    <span className={`px-2 py-1 text-xs rounded-full ${getStatusClasses(order.status)}`}>
+                      {order.status}
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-6">
+                    <span className="font-medium text-emerald-600">${parseFloat(order.total_amount || 0).toFixed(2)}</span>
+                    <span className="text-sm text-slate-500">{order.items?.length || 0} items</span>
+                    <span className="text-sm text-slate-500">{new Date(order.order_date).toLocaleDateString()}</span>
+                    {expandedOrder === order.b2b_order_id ? (
+                      <ChevronUp className="w-5 h-5 text-slate-400" />
+                    ) : (
+                      <ChevronDown className="w-5 h-5 text-slate-400" />
+                    )}
+                  </div>
+                </div>
+                
+                {expandedOrder === order.b2b_order_id && order.items && order.items.length > 0 && (
+                  <div className="px-6 pb-4">
+                    <div className="bg-slate-50 rounded-lg overflow-hidden">
+                      <table className="w-full">
+                        <thead className="bg-slate-100">
+                          <tr>
+                            <th className="px-4 py-2 text-left text-xs font-medium text-slate-500 uppercase">Product</th>
+                            <th className="px-4 py-2 text-right text-xs font-medium text-slate-500 uppercase">Unit Price</th>
+                            <th className="px-4 py-2 text-right text-xs font-medium text-slate-500 uppercase">Qty</th>
+                            <th className="px-4 py-2 text-right text-xs font-medium text-slate-500 uppercase">Total</th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-slate-200">
+                          {order.items.map((item, idx) => (
+                            <tr key={item.b2b_item_id || idx}>
+                              <td className="px-4 py-3 text-slate-900">{item.product_name}</td>
+                              <td className="px-4 py-3 text-right text-slate-600">${parseFloat(item.unit_price || 0).toFixed(2)}</td>
+                              <td className="px-4 py-3 text-right text-slate-600">{item.quantity}</td>
+                              <td className="px-4 py-3 text-right font-medium text-slate-900">
+                                ${(parseFloat(item.unit_price || 0) * item.quantity).toFixed(2)}
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                )}
+              </div>
+            ))}
           </div>
         )}
       </div>

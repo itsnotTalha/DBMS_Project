@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { LogOut, Menu, X, ChevronDown, LayoutDashboard, Package, Truck, Bell, BarChart, FileText, Users, ShoppingBag, Factory, ClipboardList, Thermometer, ShieldCheck, User, LifeBuoy, Lock, AlertTriangle, History, MapPin, Receipt, FlaskConical, Settings, HelpCircle } from 'lucide-react';
+import { LogOut, Menu, X, ChevronDown, LayoutDashboard, Package, Truck, BarChart, FileText, Users, ShoppingBag, Factory, ClipboardList, Thermometer, ShieldCheck, User, LifeBuoy, Lock, AlertTriangle, History, MapPin, Receipt, FlaskConical, Settings } from 'lucide-react';
 
 const Layout = ({ children, user }) => {
   const navigate = useNavigate();
@@ -27,16 +27,15 @@ const Layout = ({ children, user }) => {
 
   const retailerMenuItems = [
     { label: 'Dashboard', path: '/retailer/dashboard', icon: <ShoppingBag size={20} /> },
-    { label: 'Orders', path: '/retailer/orders', icon: <Receipt size={20} /> },
+    { label: 'Customer Orders', path: '/retailer/customer-orders', icon: <Receipt size={20} /> },
+    { label: 'My Orders', path: '/retailer/orders', icon: <Package size={20} /> },
     { label: 'Inventory', path: '/retailer/inventory', icon: <Package size={20} /> },
     { label: 'Shipments', path: '/retailer/shipments', icon: <Truck size={20} /> },
     { label: 'Customers', path: '/retailer/customers', icon: <Users size={20} /> },
     { label: 'Verify Products', path: '/retailer/verify', icon: <ShieldCheck size={20} /> },
-    { label: 'Cold Chain Alerts', path: '/retailer/alerts', icon: <AlertTriangle size={20} /> },
-    { label: 'Recalls', path: '/retailer/recalls', icon: <Bell size={20} /> },
-    { label: 'Compliance', path: '/retailer/compliance', icon: <FileText size={20} /> },
+    { label: 'Alerts', path: '/retailer/alerts', icon: <AlertTriangle size={20} /> },
     { label: 'Analytics', path: '/retailer/analytics', icon: <BarChart size={20} /> },
-    { label: 'Support', path: '/retailer/support', icon: <HelpCircle size={20} /> },
+    { label: 'Settings', path: '/retailer/settings', icon: <Settings size={20} /> },
   ];
 
   const customerMenuItems = [
