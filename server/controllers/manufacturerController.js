@@ -1,5 +1,6 @@
 import db from '../config/db.js';
 import crypto from 'crypto';
+import { generateQRCode } from '../utils/qrGenerator.js';
 
 // ============================================================
 // UTILITY FUNCTIONS
@@ -534,6 +535,98 @@ export const getLedger = async (req, res) => {
         });
     } catch (error) {
         console.error('Error fetching ledger:', error);
+        res.status(500).json({ error: error.message });
+    }
+};
+
+// ============================================================
+// 10. QR CODE GENERATION
+// ============================================================
+
+export const generateProductQR = async (req, res) => {
+    try {
+        const { item_id } = req.params;
+        const manufacturer_id = req.user.id;
+
+        // Fetch product item with batch and manufacturer validation
+        const [[item]] = await db.query(`
+            SELECT 
+                pi.item_id,
+                pi.serial_code,
+                pi.authentication_hash,
+                b.batch_id,
+                b.batch_number,
+                b.manufacturer_id
+            FROM Product_Items pi
+            JOIN Batches b ON pi.batch_id = b.batch_id
+            WHERE pi.item_id = ? AND b.manufacturer_id = ?
+        `, [item_id, manufacturer_id]);
+
+        if (!item) {
+            return res.status(404).json({ error: 'Product item not found or unauthorized' });
+        }
+
+        // Generate QR code from serial code and authentication hash
+        const qrDataUrl = await generateQRCode(item.serial_code, item.authentication_hash);
+
+        res.json({
+            success: true,
+            item_id: item.item_id,
+            serial_code: item.serial_code,
+            batch_number: item.batch_number,
+            qr_code: qrDataUrl, // Base64 encoded PNG data URL
+            generated_at: new Date().toISOString()
+        });
+    } catch (error) {
+        console.error('Error generating QR code:', error);
+        res.status(500).json({ error: error.message });
+    }
+};
+
+export const generateBatchQRCodes = async (req, res) => {
+    try {
+        const { batch_id } = req.params;
+        const manufacturer_id = req.user.id;
+
+        // Fetch all items in batch with manufacturer validation
+        const [items] = await db.query(`
+            SELECT 
+                pi.item_id,
+                pi.serial_code,
+                pi.authentication_hash,
+                b.batch_number
+            FROM Product_Items pi
+            JOIN Batches b ON pi.batch_id = b.batch_id
+            WHERE b.batch_id = ? AND b.manufacturer_id = ?
+            ORDER BY pi.item_id ASC
+        `, [batch_id, manufacturer_id]);
+
+        if (items.length === 0) {
+            return res.status(404).json({ error: 'Batch not found or unauthorized' });
+        }
+
+        // Generate QR codes for all items
+        const qrCodes = await Promise.all(
+            items.map(async (item) => {
+                const qrDataUrl = await generateQRCode(item.serial_code, item.authentication_hash);
+                return {
+                    item_id: item.item_id,
+                    serial_code: item.serial_code,
+                    qr_code: qrDataUrl
+                };
+            })
+        );
+
+        res.json({
+            success: true,
+            batch_id: batch_id,
+            batch_number: items[0].batch_number,
+            total_qr_codes: qrCodes.length,
+            qr_codes: qrCodes,
+            generated_at: new Date().toISOString()
+        });
+    } catch (error) {
+        console.error('Error generating batch QR codes:', error);
         res.status(500).json({ error: error.message });
     }
 };
