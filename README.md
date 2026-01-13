@@ -1,82 +1,77 @@
-# BESS-PAS: Blockchain-Enabled Secure Supply-chain and Authenticity System
+# Supply Chain Management System
 
-A full-stack supply chain management system with blockchain integration, supporting multiple user roles (Customer, Manufacturer, Retailer, Admin).
+A full-stack supply chain management system with blockchain-style traceability, IoT monitoring, and multi-role support.
+
+## Tech Stack
+
+| Layer | Technology |
+|-------|------------|
+| Frontend | React 19, Vite, Tailwind CSS, React Router |
+| Backend | Node.js, Express 5, JWT Auth |
+| Database | MySQL 8 with connection pooling |
 
 ## Project Structure
 
 ```
-├── client/                 # React frontend (ES modules)
+├── client/                    # React Frontend
 │   ├── src/
-│   │   ├── pages/         # Page components
-│   │   ├── App.jsx        # Main app component
-│   │   └── main.jsx       # Entry point
-│   ├── package.json
-│   └── vite.config.js
+│   │   ├── pages/
+│   │   │   ├── Auth/          # Login, Register
+│   │   │   ├── manufacturer/  # Products, Production, Shipments, Orders
+│   │   │   ├── retailer/      # Dashboard, Orders
+│   │   │   ├── customer/      # Dashboard
+│   │   │   └── admin/         # Dashboard
+│   │   └── App.jsx            # Routes configuration
+│   └── package.json
 │
-└── server/                 # Express backend (ES modules)
-    ├── config/
-    │   └── db.js          # Database connection
-    ├── controllers/
-    │   ├── authController.js
-    │   └── dashboardController.js
-    ├── routes/
-    │   ├── authRoutes.js
-    │   └── dashboardRoutes.js
-    ├── server.js          # Express server
-    ├── package.json
-    └── .env.example       # Environment variables template
+├── server/                    # Express Backend
+│   ├── config/db.js           # MySQL connection pool
+│   ├── controllers/           # Business logic
+│   │   ├── authController.js
+│   │   ├── manufacturerController.js
+│   │   └── retailerController.js
+│   ├── routes/                # API endpoints
+│   ├── middleware/authMiddleware.js
+│   └── server.js              # Entry point
+│
+└── Dbms queries.txt           # Database schema
 ```
 
-## Prerequisites
+## User Roles
 
-- Node.js (v16 or higher)
-- MySQL 8.0 or higher
-- npm or yarn
+| Role | Features |
+|------|----------|
+| **Manufacturer** | Products, Production batches, Shipments, B2B Orders, IoT Alerts, Ledger Audit |
+| **Retailer** | Dashboard, Order management, Inventory |
+| **Customer** | Dashboard, Order tracking |
+| **Admin** | System management |
 
-## Installation & Setup
+## Quick Start
 
-### 1. Backend Setup
+### 1. Database Setup
+
+```bash
+mysql -u root -p < "Dbms queries.txt"
+```
+
+### 2. Backend
 
 ```bash
 cd server
 npm install
-```
 
-### 2. Configure Environment Variables
-
-```bash
-cp .env.example .env
-```
-
-Edit `.env` with your database credentials:
-```
-PORT=5000
+# Create .env file
+echo "PORT=5000
 DB_HOST=localhost
 DB_USER=root
-DB_PASSWORD=your_password
-DB_NAME=bess_pas
-JWT_SECRET=your_secure_jwt_secret_key
-```
+DB_PASSWORD=yourpassword
+DB_NAME=supply_chain_db
+JWT_SECRET=your_secret_key" > .env
 
-### 3. Database Setup
-
-Create the MySQL database and import the schema:
-
-```bash
-mysql -u root -p < database_schema.sql
-```
-
-### 4. Start Backend Server
-
-```bash
 npm start
-# or with nodemon for development
-npx nodemon server.js
 ```
 
-Server will run on `http://localhost:5000`
-
-### 5. Frontend Setup
+### 3. Frontend
 
 ```bash
 cd client
@@ -84,138 +79,57 @@ npm install
 npm run dev
 ```
 
-Frontend will run on `http://localhost:5173`
+**URLs:** Frontend → http://localhost:5173 | Backend → http://localhost:5000
 
 ## API Endpoints
 
-### Authentication
-- `POST /api/auth/register` - Register new user
-- `POST /api/auth/login` - User login
-- `POST /api/auth/logout` - User logout
+### Auth
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| POST | `/api/auth/register` | Register user |
+| POST | `/api/auth/login` | Login |
 
-### Dashboard
-- `GET /api/dashboard/stats` - Get dashboard statistics
-- `GET /api/dashboard/shipments` - Get shipment data
-- `GET /api/dashboard/ledger` - Get ledger transactions
+### Manufacturer
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| GET | `/api/manufacturer/products` | List products |
+| POST | `/api/manufacturer/products` | Add product |
+| GET | `/api/manufacturer/production` | List batches |
+| POST | `/api/manufacturer/production` | Create batch |
+| GET | `/api/manufacturer/orders` | B2B orders |
 
-## User Roles & Access
+### Retailer
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| GET | `/api/retailer/orders` | List orders |
+| POST | `/api/retailer/orders` | Place order |
 
-### 1. Customer
-- View order history
-- Track shipments
-- View product information
-- Route: `/customer-dashboard`
+## Database Schema (Key Tables)
 
-### 2. Manufacturer
-- Full dashboard access
-- Manage products
-- Track shipments
-- View IoT alerts
-- Access ledger audit
-- Route: `/dashboard`
+```
+Users                  → Base user table (all roles)
+├── Manufacturers      → Company info, license
+├── Retailers          → Business info, tax ID
+├── Customers          → Personal info
+└── Admins             → Permissions
 
-### 3. Retailer
-- Manage inventory
-- Track sales
-- Customer management
-- Route: `/retailer-dashboard`
+Product_Definitions    → Product catalog
+Batches                → Production batches
+Product_Items          → Individual items with serial codes
+Product_Transactions   → Blockchain-style traceability ledger
 
-### 4. Admin
-- System administration
-- User management
-- System monitoring
-- Route: `/admin-dashboard`
+B2B_Orders             → Manufacturer ↔ Retailer orders
+Customer_Orders        → Customer purchases
+Inventory              → Retailer stock levels
 
-## Features
-
-✅ **Authentication & Authorization**
-- JWT-based authentication
-- Role-based access control
-- Secure password hashing (bcryptjs)
-
-✅ **ES Module Architecture**
-- Both frontend and backend use ES6 modules
-- Clean separation of controllers and routes
-- Modular component structure
-
-✅ **Responsive UI**
-- Tailwind CSS styling
-- Mobile-friendly design
-- Icon library (Lucide React)
-
-✅ **Real-time Data**
-- Dashboard statistics
-- Shipment tracking
-- IoT sensor readings
-- Ledger transactions
-
-## Development
-
-### Available Scripts
-
-**Backend:**
-```bash
-npm start           # Start server
-npx nodemon server.js  # Start with auto-reload
+IoT_Readings           → Temperature/humidity monitoring
+QR_Scan_Logs           → Authenticity verification
 ```
 
-**Frontend:**
-```bash
-npm run dev         # Development server
-npm run build       # Production build
-npm run preview     # Preview production build
-npm run lint        # Run ESLint
-```
+## Key Features
 
-## Environment Variables
-
-| Variable | Description | Example |
-|----------|-------------|---------|
-| PORT | Server port | 5000 |
-| DB_HOST | MySQL host | localhost |
-| DB_USER | MySQL username | root |
-| DB_PASSWORD | MySQL password | password123 |
-| DB_NAME | Database name | bess_pas |
-| JWT_SECRET | JWT signing secret | your_secret_key |
-
-## Troubleshooting
-
-### Backend Connection Issues
-- Ensure MySQL is running
-- Check database credentials in `.env`
-- Verify database and tables exist
-
-### Frontend Not Loading
-- Clear browser cache
-- Check if Vite dev server is running
-- Verify backend is accessible on port 5000
-
-### Authentication Errors
-- Ensure JWT_SECRET is set
-- Check token expiration
-- Verify user credentials in database
-
-## Technology Stack
-
-**Frontend:**
-- React 19
-- React Router DOM
-- Axios (HTTP client)
-- Tailwind CSS
-- Lucide React (Icons)
-- Vite
-
-**Backend:**
-- Express.js 5
-- MySQL2/Promise
-- JWT (jsonwebtoken)
-- bcryptjs
-- dotenv
-
-## License
-
-ISC
-
-## Support
-
-For issues or questions, please refer to the documentation or contact the development team.
+- **Multi-role Auth** - JWT-based with role-specific data
+- **Production Tracking** - Batch creation with auto-generated codes
+- **Traceability Ledger** - Blockchain-style transaction history
+- **IoT Integration** - Cold-chain monitoring support
+- **QR Verification** - Counterfeit detection via scan logs

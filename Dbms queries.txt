@@ -1,11 +1,5 @@
--- ========================================================
--- AMANAH: SUPPLY CHAIN & ANTI-COUNTERFEIT SYSTEM
--- Database: supply_chain_db
--- ========================================================
-
--- ========================================================
--- 1. USER MANAGEMENT MODULE
--- ========================================================
+CREATE DATABASE supply_chain_db;
+USE supply_chain_db
 
 CREATE TABLE Users (
     user_id INT PRIMARY KEY AUTO_INCREMENT,
@@ -256,7 +250,24 @@ CREATE TABLE Product_Reviews (
     FOREIGN KEY (customer_id) REFERENCES Customers(customer_id)
 );
 
--- ========================================================
--- END OF AMANAH DATABASE SCHEMA
--- ========================================================
 
+-- 1. Add product_def_id to Batches (This makes Batches the "determinant")
+ALTER TABLE Batches ADD COLUMN product_def_id INT NOT NULL;
+ALTER TABLE Batches ADD CONSTRAINT fk_batch_product FOREIGN KEY (product_def_id) REFERENCES Product_Definitions(product_def_id);
+
+-- 2. Remove the redundant column from Product_Items
+ALTER TABLE Product_Items DROP FOREIGN KEY product_items_ibfk_2; 
+ALTER TABLE Product_Items DROP COLUMN product_def_id;
+
+-- 3. Add current_stock column to Product_Definitions to fix "Unknown column" error
+ALTER TABLE Product_Definitions ADD COLUMN current_stock INT DEFAULT 0;
+
+
+-- 4. Add the missing created_at column for sorting
+ALTER TABLE Batches ADD COLUMN created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP;
+
+-- 5. Add the status column (required by your code's INSERT statement)
+ALTER TABLE Batches ADD COLUMN status ENUM('Active', 'Completed', 'In Progress', 'Cancelled') DEFAULT 'Active';
+
+-- 6. Rename batch_code to batch_number to match your code (Optional, or update code to use batch_code)
+ALTER TABLE Batches CHANGE COLUMN batch_code batch_number VARCHAR(100);
