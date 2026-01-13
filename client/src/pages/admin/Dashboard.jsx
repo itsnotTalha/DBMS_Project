@@ -2,12 +2,11 @@ import React, { useEffect, useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import axios from 'axios';
 import {
-  LayoutDashboard, Users, Activity, Bell, 
-  ShieldCheck, Search, Eye, X, Network, Database, Link as LinkIcon
+  LayoutDashboard, Users, Activity, Bell, AlertTriangle, MessageSquare,
+  ShieldCheck, Search, Eye, X, Network, Database, Link as LinkIcon, CheckCircle
 } from 'lucide-react';
 import Layout from '../Layout';
 
-// API Base
 const API_BASE = 'http://localhost:5000/api/admin';
 
 const Dashboard = () => {
@@ -15,8 +14,9 @@ const Dashboard = () => {
   const location = useLocation();
   const [user, setUser] = useState(null);
   
-  // View State (Dashboard, Users, Network)
-  const [currentView, setCurrentView] = useState('dashboard');
+  // View State derived from URL query param
+  const queryParams = new URLSearchParams(location.search);
+  const currentTab = queryParams.get('tab') || 'dashboard';
 
   // --- Data States ---
   const [stats, setStats] = useState({
@@ -25,28 +25,54 @@ const Dashboard = () => {
     system_alerts: 0,
     total_transactions: 0
   });
-  const [recentActivity, setRecentActivity] = useState([]);
   
-  // User Monitor Logic
+  const [recentActivity, setRecentActivity] = useState([]);
   const [usersList, setUsersList] = useState([]);
+  const [connections, setConnections] = useState([]);
+  const [alertsList, setAlertsList] = useState([]); // New State
+  const [complaintsList, setComplaintsList] = useState([]); // New State
+
+  // UI States
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedUser, setSelectedUser] = useState(null);
   const [showModal, setShowModal] = useState(false);
-
-  // Network Monitor Logic
-  const [connections, setConnections] = useState([]);
-
   const [loading, setLoading] = useState(true);
 
-  // Navigation Menu
+  // --- MENU CONFIGURATION ---
   const adminMenuItems = [
-    { icon: <LayoutDashboard size={18} />, label: 'Overview', onClick: () => setCurrentView('dashboard') },
-    { icon: <Users size={18} />, label: 'User Monitor', onClick: () => setCurrentView('users') },
-    { icon: <Network size={18} />, label: 'Network Map', onClick: () => setCurrentView('network') },
-    { icon: <Database size={18} />, label: 'System Logs', onClick: () => setCurrentView('logs') }, // Placeholder for now
+    { 
+      icon: <LayoutDashboard size={18} />, 
+      label: 'Dashboard', 
+      path: '/admin/dashboard' 
+    },
+    { 
+      icon: <Users size={18} />, 
+      label: 'User Monitor', 
+      path: '/admin/dashboard?tab=users' 
+    },
+    { 
+      icon: <Network size={18} />, 
+      label: 'Network Map', 
+      path: '/admin/dashboard?tab=network' 
+    },
+    { 
+      icon: <AlertTriangle size={18} />, 
+      label: 'System Alerts', 
+      path: '/admin/dashboard?tab=alerts' 
+    },
+    { 
+      icon: <MessageSquare size={18} />, 
+      label: 'Complaints', 
+      path: '/admin/dashboard?tab=complaints' 
+    },
+    { 
+      icon: <Database size={18} />, 
+      label: 'System Logs', 
+      path: '/admin/dashboard?tab=logs' 
+    },
   ];
 
-  // --- Initialization & Data Fetching ---
+  // --- Initialization ---
   useEffect(() => {
     const storedUser = localStorage.getItem('user') || sessionStorage.getItem('user');
     if (!storedUser) {
@@ -60,7 +86,6 @@ const Dashboard = () => {
       return;
     }
     setUser(parsedUser);
-
     fetchAllData();
   }, [navigate]);
 
@@ -70,57 +95,42 @@ const Dashboard = () => {
     setLoading(true);
 
     try {
-      // We use allSettled so if one endpoint (like stats) fails, 
-      // the others (like users) still load.
+      // Fetch all data in parallel
       const results = await Promise.allSettled([
         axios.get(`${API_BASE}/dashboard-stats`, authConfig),
         axios.get(`${API_BASE}/recent-activity`, authConfig),
         axios.get(`${API_BASE}/users`, authConfig),       
-        axios.get(`${API_BASE}/connections`, authConfig) 
+        axios.get(`${API_BASE}/connections`, authConfig),
+        axios.get(`${API_BASE}/alerts`, authConfig),      
+        axios.get(`${API_BASE}/complaints`, authConfig) // Assuming this endpoint exists, or it fails gracefully
       ]);
 
-      // 0: Stats, 1: Activity, 2: Users, 3: Connections
-      
-      // Handle Stats
-      if (results[0].status === 'fulfilled') {
-        setStats(results[0].value.data);
-      }
-
-      // Handle Activity
-      if (results[1].status === 'fulfilled') {
-         setRecentActivity(results[1].value.data.activities || []);
-      }
-
-      // Handle Users (CRITICAL FIX)
+      // 0:Stats, 1:Activity, 2:Users, 3:Connections, 4:Alerts, 5:Complaints
+      if (results[0].status === 'fulfilled') setStats(results[0].value.data);
+      if (results[1].status === 'fulfilled') setRecentActivity(results[1].value.data.activities || []);
       if (results[2].status === 'fulfilled') {
-        console.log("Users Data Received:", results[2].value.data); // Check your console
-        // Handle case where backend returns { users: [...] } vs [...]
         const userData = results[2].value.data;
         setUsersList(Array.isArray(userData) ? userData : userData.users || []);
-      } else {
-        console.error("Failed to fetch users:", results[2].reason);
       }
-
-      // Handle Connections
-      if (results[3].status === 'fulfilled') {
-        setConnections(results[3].value.data || []);
-      }
+      if (results[3].status === 'fulfilled') setConnections(results[3].value.data || []);
+      if (results[4].status === 'fulfilled') setAlertsList(results[4].value.data.alerts || []);
+      if (results[5].status === 'fulfilled') setComplaintsList(results[5].value.data || []);
 
     } catch (err) {
-      console.error('Critical error fetching admin system data:', err);
+      console.error('Error fetching data:', err);
     } finally {
       setLoading(false);
     }
   };
 
-  // --- Logic: Filter Users ---
+  // Helper: Filter Users
   const filteredUsers = usersList.filter(u => 
     u.email?.toLowerCase().includes(searchTerm.toLowerCase()) ||
     (u.username && u.username.toLowerCase().includes(searchTerm.toLowerCase())) ||
     u.role?.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
-  // --- Logic: View User Details ---
+  // Helper: View User Details
   const handleViewUser = async (userId) => {
     try {
       const token = localStorage.getItem('token');
@@ -134,13 +144,12 @@ const Dashboard = () => {
     }
   };
 
-  // --- Render Loading State ---
   if (loading) {
     return (
       <div className="h-screen flex items-center justify-center bg-slate-50">
         <div className="flex flex-col items-center gap-4">
           <div className="w-10 h-10 border-4 border-emerald-500 border-t-transparent rounded-full animate-spin" />
-          <p className="text-sm font-semibold text-slate-500">Loading System Data...</p>
+          <p className="text-sm font-semibold text-slate-500">Loading Dashboard...</p>
         </div>
       </div>
     );
@@ -150,10 +159,14 @@ const Dashboard = () => {
     <Layout user={user} menuItems={adminMenuItems}>
       <div className="p-8 space-y-8">
         
-        {/* --- VIEW: DASHBOARD OVERVIEW --- */}
-        {currentView === 'dashboard' && (
-          <>
-            <div className="grid grid-cols-4 gap-3 md:gap-6">
+        {/* =======================================================
+            VIEW 1: DASHBOARD OVERVIEW
+           ======================================================= */}
+        {currentTab === 'dashboard' && (
+          <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
+            <h2 className="text-2xl font-bold text-slate-900 mb-6">System Overview</h2>
+            
+            <div className="grid grid-cols-4 gap-3 md:gap-6 mb-8">
               <StatCard title="Total Users" value={stats.total_users} icon={<Users />} />
               <StatCard title="Manufacturers" value={stats.active_manufacturers} icon={<ShieldCheck />} />
               <StatCard title="System Alerts" value={stats.system_alerts} icon={<Bell />} alert={stats.system_alerts > 0} />
@@ -162,7 +175,7 @@ const Dashboard = () => {
 
             <div className="grid grid-cols-1 xl:grid-cols-3 gap-8">
               <div className="xl:col-span-2 bg-white rounded-2xl shadow-sm border">
-                <div className="p-6 border-b flex justify-between">
+                <div className="p-6 border-b">
                   <h3 className="font-black">Recent System Activity</h3>
                 </div>
                 <table className="w-full text-sm">
@@ -209,26 +222,32 @@ const Dashboard = () => {
                   </div>
               </div>
             </div>
-          </>
+          </div>
         )}
 
-        {/* --- VIEW: USER MONITOR (Logic Added Here) --- */}
-        {currentView === 'users' && (
-          <div className="space-y-6">
+        {/* =======================================================
+            VIEW 2: USER MONITOR
+           ======================================================= */}
+        {currentTab === 'users' && (
+          <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
             <div className="flex justify-between items-center">
               <div>
                 <h2 className="text-2xl font-bold text-slate-900">User Monitor</h2>
-                <p className="text-slate-500 text-sm">Manage access and view detailed user profiles.</p>
+                <p className="text-slate-500 text-sm">Manage registered users and permissions.</p>
               </div>
-              <div className="bg-white p-2 rounded-full shadow-sm border border-slate-200 flex items-center px-4">
+              
+              <div className="bg-white p-2 rounded-full shadow-sm border border-slate-200 flex items-center px-4 w-72">
                 <Search className="w-4 h-4 text-slate-400 mr-2" />
                 <input 
                   type="text" 
                   placeholder="Search users..." 
-                  className="outline-none text-sm w-64 bg-transparent"
+                  className="outline-none text-sm w-full bg-transparent"
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
                 />
+                {searchTerm && (
+                   <button onClick={() => setSearchTerm('')}><X size={14} className="text-slate-400 hover:text-red-500"/></button>
+                )}
               </div>
             </div>
 
@@ -269,7 +288,6 @@ const Dashboard = () => {
                         <button 
                           onClick={() => handleViewUser(u.user_id)}
                           className="p-2 hover:bg-blue-50 text-slate-400 hover:text-blue-600 rounded-lg transition-colors"
-                          title="View Details"
                         >
                           <Eye size={18} />
                         </button>
@@ -285,12 +303,14 @@ const Dashboard = () => {
           </div>
         )}
 
-        {/* --- VIEW: NETWORK MAP (Logic Added Here) --- */}
-        {currentView === 'network' && (
-          <div className="space-y-6">
+        {/* =======================================================
+            VIEW 3: NETWORK MAP
+           ======================================================= */}
+        {currentTab === 'network' && (
+          <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
              <div>
                 <h2 className="text-2xl font-bold text-slate-900">Network Map</h2>
-                <p className="text-slate-500 text-sm">Visualizing active supply chain connections.</p>
+                <p className="text-slate-500 text-sm">Visualizing manufacturer to retailer connections.</p>
               </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -331,9 +351,115 @@ const Dashboard = () => {
           </div>
         )}
 
+        {/* =======================================================
+            VIEW 4: SYSTEM ALERTS (New Requirement)
+           ======================================================= */}
+        {currentTab === 'alerts' && (
+          <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
+            <div>
+              <h2 className="text-2xl font-bold text-slate-900">System Alerts & Bugs</h2>
+              <p className="text-slate-500 text-sm">Critical system notifications and error reports.</p>
+            </div>
+
+            <div className="space-y-4">
+              {alertsList.length > 0 ? alertsList.map((alert, idx) => (
+                <div key={idx} className="bg-white p-5 rounded-xl border border-l-4 border-l-red-500 shadow-sm flex items-start gap-4">
+                  <div className="p-2 bg-red-50 rounded-full text-red-500 shrink-0">
+                    <AlertTriangle size={20} />
+                  </div>
+                  <div className="flex-1">
+                    <div className="flex justify-between items-start">
+                      <h4 className="font-bold text-slate-900">{alert.alert_type}</h4>
+                      <span className="text-xs text-slate-400 font-mono">{new Date(alert.timestamp).toLocaleString()}</span>
+                    </div>
+                    <p className="text-sm text-slate-600 mt-1">{alert.description}</p>
+                    <div className="flex gap-3 mt-3">
+                      <span className="text-xs bg-slate-100 text-slate-600 px-2 py-1 rounded border border-slate-200">
+                        {alert.device_type}
+                      </span>
+                      {alert.manufacturer && (
+                        <span className="text-xs bg-purple-50 text-purple-700 px-2 py-1 rounded border border-purple-100">
+                          {alert.manufacturer}
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              )) : (
+                <div className="bg-white p-12 rounded-2xl border border-dashed border-slate-300 text-center">
+                  <CheckCircle className="mx-auto text-emerald-400 mb-3" size={48} />
+                  <h3 className="text-lg font-bold text-slate-700">All Systems Operational</h3>
+                  <p className="text-slate-500 text-sm">No active bugs or alerts reported.</p>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+
+        {/* =======================================================
+            VIEW 5: COMPLAINTS (New Requirement)
+           ======================================================= */}
+        {currentTab === 'complaints' && (
+          <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
+            <div>
+              <h2 className="text-2xl font-bold text-slate-900">User Complaints</h2>
+              <p className="text-slate-500 text-sm">Feedback and issues reported by users.</p>
+            </div>
+
+            <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
+              <table className="w-full text-left">
+                <thead className="bg-slate-50 text-slate-500 text-xs uppercase font-semibold">
+                  <tr>
+                    <th className="p-4">User / Contact</th>
+                    <th className="p-4">Subject</th>
+                    <th className="p-4">Message</th>
+                    <th className="p-4">Date</th>
+                    <th className="p-4">Status</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-100 text-sm">
+                  {complaintsList.length > 0 ? complaintsList.map((comp, idx) => (
+                    <tr key={idx} className="hover:bg-slate-50 transition">
+                      <td className="p-4 font-medium text-slate-900">{comp.user_name || 'Anonymous'}</td>
+                      <td className="p-4 font-bold">{comp.subject}</td>
+                      <td className="p-4 text-slate-600 max-w-md truncate">{comp.message}</td>
+                      <td className="p-4 text-slate-400 text-xs">{new Date(comp.created_at).toLocaleDateString()}</td>
+                      <td className="p-4">
+                        <span className="px-2 py-1 bg-yellow-100 text-yellow-700 text-xs font-bold rounded">
+                          {comp.status || 'Pending'}
+                        </span>
+                      </td>
+                    </tr>
+                  )) : (
+                    <tr>
+                      <td colSpan="5" className="p-12 text-center text-slate-400 italic">
+                        No complaints found in the database.
+                      </td>
+                    </tr>
+                  )}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        )}
+        
+        {/* =======================================================
+            VIEW 6: SYSTEM LOGS (Placeholder)
+           ======================================================= */}
+        {currentTab === 'logs' && (
+           <div className="flex flex-col items-center justify-center h-96 bg-white rounded-2xl border border-dashed border-slate-300">
+              <Database className="text-slate-300 mb-4" size={48} />
+              <h3 className="text-lg font-bold text-slate-700">System Logs Archive</h3>
+              <p className="text-slate-500 text-sm">Select a date range to download server logs.</p>
+              <button className="mt-4 px-4 py-2 bg-slate-800 text-white rounded-lg text-sm font-semibold hover:bg-slate-900">
+                Download Recent Logs
+              </button>
+           </div>
+        )}
+
       </div>
 
-      {/* --- MODAL: USER DETAILS (From your code) --- */}
+      {/* --- MODAL (Global) --- */}
       {showModal && selectedUser && (
         <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-2xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto animate-in fade-in zoom-in duration-200">
@@ -348,7 +474,6 @@ const Dashboard = () => {
             </div>
 
             <div className="p-6 grid grid-cols-1 md:grid-cols-2 gap-8">
-              {/* Left Col: Basics */}
               <div className="space-y-5">
                 <h4 className="font-bold text-xs text-slate-400 uppercase tracking-widest border-b pb-2">Account Info</h4>
                 <div>
@@ -369,12 +494,10 @@ const Dashboard = () => {
                 </div>
               </div>
 
-              {/* Right Col: Dynamic Details */}
               <div className="space-y-5">
                 <h4 className="font-bold text-xs text-slate-400 uppercase tracking-widest border-b pb-2">System Metadata</h4>
                 <div className="space-y-4">
                   {Object.entries(selectedUser).map(([key, value]) => {
-                     // Filter out fields we already showed or don't want to show
                      if (['user_id', 'username', 'name', 'email', 'role', 'status', 'password', 'is_verified', 'extra_info'].includes(key)) return null;
                      return (
                        <div key={key} className="flex flex-col">
@@ -385,7 +508,6 @@ const Dashboard = () => {
                        </div>
                      );
                   })}
-                  {/* Explicitly show 'created_at' prettified if it exists in the filtered-out list but we want it here */}
                   {selectedUser.created_at && (
                     <div>
                       <label className="text-xs text-slate-500 font-semibold">Joined Date</label>

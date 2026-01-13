@@ -1,21 +1,40 @@
 import React, { useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { LogOut, Menu, X, ChevronDown, LayoutDashboard, Package, Truck, BarChart, FileText, Users, ShoppingBag, Factory, ClipboardList, Thermometer, ShieldCheck, User, LifeBuoy, Lock, AlertTriangle, History, MapPin, Receipt, FlaskConical, Settings, Link, Database } from 'lucide-react';
+import { 
+  LogOut, Menu, X, ChevronDown, LayoutDashboard, Package, Truck, 
+  BarChart, FileText, Users, ShoppingBag, Factory, ClipboardList, 
+  Thermometer, ShieldCheck, User, LifeBuoy, Lock, AlertTriangle, 
+  History, Receipt, FlaskConical, Settings, Link, Database 
+} from 'lucide-react';
 
-const Layout = ({ children, user }) => {
+const Layout = ({ children, user, menuItems }) => {
   const navigate = useNavigate();
   const location = useLocation();
-  const [isSidebarOpen, setIsSidebarOpen] = useState(true); // Renamed for clarity
+  const [isSidebarOpen, setIsSidebarOpen] = useState(true);
   const [userMenuOpen, setUserMenuOpen] = useState(false);
 
-  const isActive = (path) => {
-    if (path.includes('?')) {
-      return location.pathname + location.search === path;
+  // --- 1. Strict Active State Logic ---
+  const isActive = (menuPath) => {
+    const currentPath = location.pathname;
+    const currentParams = new URLSearchParams(location.search);
+    const currentTab = currentParams.get('tab');
+
+    const [menuBasePath, menuQuery] = menuPath.split('?');
+    const menuParams = new URLSearchParams(menuQuery);
+    const menuTab = menuParams.get('tab');
+
+    if (currentPath !== menuBasePath) return false;
+
+    if (menuTab) {
+      return currentTab === menuTab;
     }
-    return location.pathname === path;
+    if (!menuTab) {
+      return !currentTab || currentTab === 'dashboard';
+    }
+    return false;
   };
 
-  // Define menu items based on roles
+  // --- Default Menus ---
   const commonMenuItems = [
     { label: 'Dashboard', path: '/', icon: <LayoutDashboard size={20} /> },
   ];
@@ -55,38 +74,35 @@ const Layout = ({ children, user }) => {
     { label: 'Help & Support', path: '/customer/help', icon: <LifeBuoy size={20} /> },
   ];
 
-  const adminMenuItems = [
-    { label: 'Users Monitor', path: '/admin/dashboard?tab=users', icon: <Users size={20} /> },
-    { label: 'Network Map', path: '/admin/dashboard?tab=connections', icon: <Link size={20} /> },
-    { label: 'System Alerts', path: '/admin/dashboard?tab=alerts', icon: <AlertTriangle size={20} /> },
-    { label: 'Database', path: '/admin/dashboard?tab=database', icon: <Database size={20} /> },
-    { label: 'Settings', path: '/admin/settings', icon: <Settings size={20} /> },
-  ];
-
+  // --- Determine Current Menu Items ---
   let currentMenuItems = [];
-  if (user?.role === 'Manufacturer') {
+  if (menuItems && menuItems.length > 0) {
+    currentMenuItems = menuItems;
+  } else if (user?.role === 'Manufacturer') {
     currentMenuItems = manufacturerMenuItems;
   } else if (user?.role === 'Retailer') {
     currentMenuItems = retailerMenuItems;
   } else if (user?.role === 'Customer') {
     currentMenuItems = customerMenuItems;
-  } else if (user?.role === 'Admin') {
-    currentMenuItems = adminMenuItems;
   } else {
-    currentMenuItems = commonMenuItems; // Default for unauthenticated or unknown roles
+    currentMenuItems = commonMenuItems;
   }
+
+  // --- FIX: Dynamic Page Title Logic ---
+  // Find the menu item that matches the current URL (including tabs)
+  const activeItem = currentMenuItems.find(item => isActive(item.path));
+  // If found, use its label. If not, fallback to path parsing.
+  const pageTitle = activeItem ? activeItem.label : location.pathname.split('/').pop().replace(/-/g, ' ').toUpperCase();
 
   const toggleSidebar = () => {
     setIsSidebarOpen(!isSidebarOpen);
   };
 
   const handleLogout = () => {
-    // Clear stored user and token
     localStorage.removeItem('user');
     localStorage.removeItem('token');
     sessionStorage.removeItem('user');
     sessionStorage.removeItem('token');
-    // Redirect to login
     navigate('/login');
   };
 
@@ -168,8 +184,10 @@ const Layout = ({ children, user }) => {
             <button onClick={toggleSidebar} className="text-slate-500 hover:text-slate-900 lg:hidden">
               <Menu size={24} />
             </button>
-            <h1 className="text-sm font-bold text-slate-900">
-              {location.pathname === '/' ? 'Dashboard' : location.pathname.split('/').pop().replace(/-/g, ' ').toUpperCase()}
+            
+            {/* UPDATED TITLE DISPLAY */}
+            <h1 className="text-sm font-bold text-slate-900 uppercase tracking-wide">
+              {pageTitle}
             </h1>
 
             <div className="relative">
@@ -188,7 +206,6 @@ const Layout = ({ children, user }) => {
                   <button
                     onClick={() => {
                       setUserMenuOpen(false);
-                      // Navigate to role-specific settings
                       const role = user?.role?.toLowerCase();
                       if (role) {
                         navigate(`/${role}/settings`);
@@ -219,7 +236,7 @@ const Layout = ({ children, user }) => {
         </div>
       </main>
 
-      {/* Mobile Overlay - only show when sidebar is open on mobile */}
+      {/* Mobile Overlay */}
       {isSidebarOpen && (
         <div
           className="fixed inset-0 bg-black/50 z-30 lg:hidden"
