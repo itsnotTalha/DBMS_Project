@@ -4,6 +4,7 @@ import axios from 'axios';
 import Layout from '../Layout';
 import { Briefcase, Plus, Download, X, QrCode } from 'lucide-react';
 import { manufacturerMenuItems } from './menu';
+import { API_MANUFACTURER } from '../../config/api';
 
 const Production = () => {
   const navigate = useNavigate();
@@ -45,8 +46,8 @@ const Production = () => {
         const config = { headers: { Authorization: `Bearer ${token}` } };
 
         const [prodRes, productsRes] = await Promise.all([
-          axios.get('http://localhost:5000/api/manufacturer/production', config),
-          axios.get('http://localhost:5000/api/manufacturer/products', config)
+          axios.get(`${API_MANUFACTURER}/production`, config),
+          axios.get(`${API_MANUFACTURER}/products`, config)
         ]);
 
         setProduction(Array.isArray(prodRes.data) ? prodRes.data : []);
@@ -73,7 +74,7 @@ const Production = () => {
     try {
       setLoadingQR(true);
       const token = localStorage.getItem('token') || sessionStorage.getItem('token');
-      const response = await axios.get(`http://localhost:5000/api/manufacturer/batch/${batchId}/qr-codes`, {
+      const response = await axios.get(`${API_MANUFACTURER}/batch/${batchId}/qr-codes`, {
         headers: { Authorization: `Bearer ${token}` }
       });
       
@@ -117,11 +118,11 @@ const Production = () => {
     try {
       const token = localStorage.getItem('token') || sessionStorage.getItem('token');
       
-      await axios.post('http://localhost:5000/api/manufacturer/production', formData, {
+      await axios.post(`${API_MANUFACTURER}/production`, formData, {
         headers: { Authorization: `Bearer ${token}` }
       });
       
-      const response = await axios.get('http://localhost:5000/api/manufacturer/production', {
+      const response = await axios.get(`${API_MANUFACTURER}/production`, {
         headers: { Authorization: `Bearer ${token}` }
       });
       

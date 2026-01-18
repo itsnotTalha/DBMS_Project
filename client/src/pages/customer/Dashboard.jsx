@@ -8,8 +8,7 @@ import {
   ChevronRight, Flag
 } from 'lucide-react';
 import { customerMenuItems } from './menu';
-
-const API_BASE = 'http://localhost:5000/api';
+import { API_BASE } from '../../config/api';
 
 // Stat Card Component - Compact
 const StatCard = ({ icon: Icon, iconColor, label, value, onClick }) => (

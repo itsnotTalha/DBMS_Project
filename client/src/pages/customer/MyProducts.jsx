@@ -7,8 +7,7 @@ import {
   Calendar, CheckCircle, Tag, Store, QrCode
 } from 'lucide-react';
 import { customerMenuItems } from './menu';
-
-const API_BASE = 'http://localhost:5000/api';
+import { API_BASE } from '../../config/api';
 
 const MyProducts = () => {
   const navigate = useNavigate();

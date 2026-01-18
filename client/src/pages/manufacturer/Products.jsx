@@ -4,6 +4,7 @@ import axios from 'axios';
 import Layout from '../Layout';
 import { Box, Plus, Search, Filter, Save, X } from 'lucide-react';
 import { manufacturerMenuItems } from './menu';
+import { API_MANUFACTURER } from '../../config/api';
 
 const Products = () => {
   const navigate = useNavigate();
@@ -38,7 +39,7 @@ const Products = () => {
     const fetchProducts = async () => {
       try {
         const token = localStorage.getItem('token') || sessionStorage.getItem('token');
-        const response = await axios.get('http://localhost:5000/api/manufacturer/products', {
+        const response = await axios.get(`${API_MANUFACTURER}/products`, {
           headers: { Authorization: `Bearer ${token}` }
         });
         setProducts(response.data);
@@ -64,12 +65,12 @@ const Products = () => {
     e.preventDefault();
     try {
       const token = localStorage.getItem('token') || sessionStorage.getItem('token');
-      await axios.post('http://localhost:5000/api/manufacturer/products', formData, {
+      await axios.post(`${API_MANUFACTURER}/products`, formData, {
         headers: { Authorization: `Bearer ${token}` }
       });
       
       // Refresh products list
-      const response = await axios.get('http://localhost:5000/api/manufacturer/products', {
+      const response = await axios.get(`${API_MANUFACTURER}/products`, {
         headers: { Authorization: `Bearer ${token}` }
       });
       setProducts(response.data);

@@ -6,8 +6,9 @@ import {
   ShieldCheck, Search, Eye, X, Network, Database, Link as LinkIcon, CheckCircle
 } from 'lucide-react';
 import Layout from '../Layout';
+import { API_ADMIN } from '../../config/api';
 
-const API_BASE = 'http://localhost:5000/api/admin';
+const API_BASE = API_ADMIN;
 
 const Dashboard = () => {
   const navigate = useNavigate();

@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { API_MANUFACTURER } from '../../config/api';
 
 export default function AddProduct() {
   const navigate = useNavigate();
@@ -23,7 +24,7 @@ export default function AddProduct() {
     try {
       const token = localStorage.getItem('token');
       // Ensure this endpoint matches your manufacturerRoutes.js configuration
-      const response = await fetch('http://localhost:5000/api/manufacturer/create-product', {
+      const response = await fetch(`${API_MANUFACTURER}/create-product`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

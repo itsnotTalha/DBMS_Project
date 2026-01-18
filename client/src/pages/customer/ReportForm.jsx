@@ -7,8 +7,7 @@ import {
   Camera, FileText, ChevronDown, X
 } from 'lucide-react';
 import { customerMenuItems } from './menu';
-
-const API_BASE = 'http://localhost:5000/api';
+import { API_BASE } from '../../config/api';
 
 const ReportForm = () => {
   const navigate = useNavigate();

@@ -4,8 +4,9 @@ import axios from 'axios';
 import Layout from '../Layout';
 import { Users, Search, Mail, Phone, ShoppingBag, DollarSign, Calendar } from 'lucide-react';
 import { retailerMenuItems } from './menu';
+import { API_RETAILER } from '../../config/api';
 
-const API_BASE = 'http://localhost:5000/api/retailer';
+const API_BASE = API_RETAILER;
 
 const Customers = () => {
   const navigate = useNavigate();

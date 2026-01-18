@@ -4,8 +4,7 @@ import axios from 'axios';
 import Layout from '../Layout';
 import { QrCode, Search, ShieldCheck, ShieldX, Package, Factory, Store, Clock, Hash, AlertTriangle, MapPin } from 'lucide-react';
 import { retailerMenuItems } from './menu';
-
-const API_BASE = 'http://localhost:5000/api';
+import { API_BASE } from '../../config/api';
 
 const VerifyProduct = () => {
   const navigate = useNavigate();

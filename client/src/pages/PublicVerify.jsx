@@ -6,8 +6,7 @@ import {
   AlertTriangle, MapPin, ArrowLeft, CheckCircle, Calendar,
   Loader2, QrCode, Search
 } from 'lucide-react';
-
-const API_BASE = 'http://localhost:5000/api';
+import { API_BASE } from '../config/api';
 
 const PublicVerify = () => {
   const { code } = useParams();
