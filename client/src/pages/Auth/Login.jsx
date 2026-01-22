@@ -43,7 +43,7 @@ const Login = () => {
             navigate('/manufacturer/Dashboard');
             break;
           case 'customer':
-            navigate('/customer/dashboard');
+            navigate('/');
             break;
           case 'retailer':
             navigate('/retailer/dashboard');

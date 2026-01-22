@@ -1,10 +1,12 @@
 import React, { useState } from 'react';
-import { useNavigate, useLocation } from 'react-router-dom';
+// CHANGED: Added Link to react-router-dom imports
+import { useNavigate, useLocation, Link } from 'react-router-dom';
+// CHANGED: Removed Link from lucide-react imports to avoid conflict
 import { 
   LogOut, Menu, X, ChevronDown, LayoutDashboard, Package, Truck, 
   BarChart, FileText, Users, ShoppingBag, Factory, ClipboardList, 
   Thermometer, ShieldCheck, User, LifeBuoy, Lock, AlertTriangle, 
-  History, Receipt, FlaskConical, Settings, Link, Database 
+  History, Receipt, FlaskConical, Settings, Database 
 } from 'lucide-react';
 
 const Layout = ({ children, user, menuItems }) => {
@@ -88,10 +90,8 @@ const Layout = ({ children, user, menuItems }) => {
     currentMenuItems = commonMenuItems;
   }
 
-  // --- FIX: Dynamic Page Title Logic ---
-  // Find the menu item that matches the current URL (including tabs)
+  // --- Dynamic Page Title Logic ---
   const activeItem = currentMenuItems.find(item => isActive(item.path));
-  // If found, use its label. If not, fallback to path parsing.
   const pageTitle = activeItem ? activeItem.label : location.pathname.split('/').pop().replace(/-/g, ' ').toUpperCase();
 
   const toggleSidebar = () => {
@@ -114,14 +114,18 @@ const Layout = ({ children, user, menuItems }) => {
       }`}>
         {/* Logo */}
         <div className={`flex items-center justify-between h-20 px-4 border-b border-slate-800 ${!isSidebarOpen && 'justify-center'}`}>
-          <div className={`flex items-center gap-3 transition-all ${!isSidebarOpen && 'justify-center w-full'}`}>
+          <Link 
+            to="/" 
+            className={`flex items-center gap-3 transition-all hover:opacity-80 ${!isSidebarOpen && 'justify-center w-full'}`}
+          >
             <div className="bg-emerald-500 p-2 rounded-lg flex-shrink-0">
               <svg className="w-5 h-5 text-white" fill="currentColor" viewBox="0 0 20 20">
                 <path d="M10 3.5a6.5 6.5 0 100 13 6.5 6.5 0 000-13zM2 10a8 8 0 1116 0 8 8 0 01-16 0z" />
               </svg>
             </div>
-            {isSidebarOpen && <span className="font-black text-lg tracking-wide">BESS-PAS</span>}
-          </div>
+            {isSidebarOpen && <span className="font-black text-lg tracking-wide text-white">BESS-PAS</span>}
+          </Link>
+
           <button onClick={toggleSidebar} className="lg:hidden text-slate-400 hover:text-white">
             <X size={24} />
           </button>
@@ -185,7 +189,6 @@ const Layout = ({ children, user, menuItems }) => {
               <Menu size={24} />
             </button>
             
-            {/* UPDATED TITLE DISPLAY */}
             <h1 className="text-sm font-bold text-slate-900 uppercase tracking-wide">
               {pageTitle}
             </h1>

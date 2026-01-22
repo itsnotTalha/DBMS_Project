@@ -5,7 +5,8 @@ import {
   Search, ShieldCheck, Lock, ShoppingCart, X, Plus, Minus, 
   Trash2, ChevronRight, ChevronLeft, Package, Truck, CheckCircle,
   Filter, Loader2, Pill, Smartphone, Apple, Shirt, Heart,
-  Sparkles, Car, Home, Dumbbell, BookOpen, Gift, Box, Store
+  Sparkles, Car, Home, Dumbbell, BookOpen, Gift, Box, Store,
+  LogOut, User, Settings, LayoutDashboard
 } from 'lucide-react';
 
 const API_BASE = 'http://localhost:5000/api';
@@ -199,6 +200,24 @@ const LandingPage = () => {
     }
   };
 
+  // // ... existing state ...
+  // const [showLoginPrompt, setShowLoginPrompt] = useState(false);
+  
+  // NEW: User Menu State
+  const [showUserMenu, setShowUserMenu] = useState(false);
+  
+  // NEW: Get User Data
+  const user = JSON.parse(localStorage.getItem('user') || sessionStorage.getItem('user') || 'null');
+
+  // NEW: Logout Handler
+  const handleLogout = () => {
+    localStorage.removeItem('user');
+    localStorage.removeItem('token');
+    sessionStorage.removeItem('user');
+    sessionStorage.removeItem('token');
+    navigate('/login');
+  };
+
   return (
     <div className="min-h-screen bg-slate-50">
       <style>{scrollbarHideStyle}</style>
@@ -229,15 +248,82 @@ const LandingPage = () => {
             </div>
 
             <div className="flex items-center gap-4">
-              <Link to="/business" className="text-sm font-medium text-slate-600 hover:text-slate-900 hidden md:block">
-                For Business
-              </Link>
-              <Link to="/login" className="text-sm font-medium text-slate-600 hover:text-emerald-600">
-                Log in
-              </Link>
-              <Link to="/register" className="bg-emerald-500 text-white px-4 py-2 rounded-lg text-sm font-semibold hover:bg-emerald-600 transition hidden sm:block">
-                Sign Up
-              </Link>
+              {!user && (
+                <Link to="/business" className="text-sm font-medium text-slate-600 hover:text-slate-900 hidden md:block">
+                  For Business
+                </Link>
+              )}
+
+              {user ? (
+                /* User Dropdown */
+                <div className="relative">
+                  <button 
+                    onClick={() => setShowUserMenu(!showUserMenu)}
+                    className="flex items-center gap-2 px-3 py-1.5 rounded-full hover:bg-slate-100 transition-colors"
+                  >
+                    <div className="w-8 h-8 bg-emerald-100 rounded-full flex items-center justify-center text-emerald-600">
+                      <User className="w-4 h-4" />
+                    </div>
+                    <span className="text-sm font-medium text-slate-700 max-w-[100px] truncate hidden sm:block">
+                      {user.name}
+                    </span>
+                  </button>
+
+                  {/* Dropdown Menu */}
+                  {showUserMenu && (
+                    <div className="absolute right-0 top-full mt-2 w-56 bg-white rounded-xl shadow-xl border border-slate-100 py-2 animate-scale-in z-50">
+                      <div className="px-4 py-2 border-b border-slate-50 mb-1">
+                        <p className="text-xs text-slate-400 font-medium uppercase">Signed in as</p>
+                        <p className="text-sm font-semibold text-slate-900 truncate">{user.email}</p>
+                      </div>
+                      
+                      {/* DYNAMIC DASHBOARD LINK */}
+                      <button 
+                        onClick={() => {
+                          const role = user?.role ? user.role.toLowerCase() : 'customer';
+                          navigate(`/${role}/dashboard`);
+                        }}
+                        className="w-full text-left px-4 py-2.5 text-sm text-slate-600 hover:bg-slate-50 hover:text-emerald-600 flex items-center gap-2 transition-colors"
+                      >
+                        <LayoutDashboard className="w-4 h-4" />
+                        Dashboard Panel
+                      </button>
+                      
+                      {/* DYNAMIC SETTINGS LINK */}
+                      <button 
+                        onClick={() => {
+                          const role = user?.role ? user.role.toLowerCase() : 'customer';
+                          navigate(`/${role}/settings`);
+                        }}
+                        className="w-full text-left px-4 py-2.5 text-sm text-slate-600 hover:bg-slate-50 hover:text-emerald-600 flex items-center gap-2 transition-colors"
+                      >
+                        <Settings className="w-4 h-4" />
+                        Settings
+                      </button>
+                      
+                      <div className="border-t border-slate-50 my-1"></div>
+                      
+                      <button 
+                        onClick={handleLogout}
+                        className="w-full text-left px-4 py-2.5 text-sm text-red-600 hover:bg-red-50 flex items-center gap-2 transition-colors"
+                      >
+                        <LogOut className="w-4 h-4" />
+                        Logout
+                      </button>
+                    </div>
+                  )}
+                </div>
+              ) : (
+                /* Guest Links */
+                <>
+                  <Link to="/login" className="text-sm font-medium text-slate-600 hover:text-emerald-600">
+                    Log in
+                  </Link>
+                  <Link to="/register" className="bg-emerald-500 text-white px-4 py-2 rounded-lg text-sm font-semibold hover:bg-emerald-600 transition hidden sm:block">
+                    Sign Up
+                  </Link>
+                </>
+              )}
               
               {/* Cart Button */}
               <button 
