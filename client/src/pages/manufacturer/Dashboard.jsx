@@ -6,8 +6,9 @@ import {
   Bell, Thermometer, Package, ClipboardList
 } from 'lucide-react';
 import Layout from '../Layout';
+import { API_MANUFACTURER } from '../../config/api';
 
-const API_BASE = 'http://localhost:5000/api/manufacturer';
+const API_BASE = API_MANUFACTURER;
 
 const Dashboard = () => {
   const navigate = useNavigate();

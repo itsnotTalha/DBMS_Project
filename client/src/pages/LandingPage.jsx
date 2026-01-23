@@ -8,8 +8,7 @@ import {
   Sparkles, Car, Home, Dumbbell, BookOpen, Gift, Box, Store,
   LogOut, User, Settings, LayoutDashboard
 } from 'lucide-react';
-
-const API_BASE = 'http://localhost:5000/api';
+import { API_BASE } from '../config/api';
 
 // Custom CSS to hide scrollbar but allow scrolling
 const scrollbarHideStyle = `

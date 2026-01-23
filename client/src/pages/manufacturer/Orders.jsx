@@ -4,6 +4,7 @@ import axios from 'axios';
 import Layout from '../Layout';
 import { Briefcase, Search, Filter, Check, X, Package } from 'lucide-react';
 import { manufacturerMenuItems } from './menu';
+import { API_MANUFACTURER } from '../../config/api';
 
 const getStatusClasses = (status) => {
   if (!status) return 'bg-slate-100 text-slate-600';
@@ -46,7 +47,7 @@ const Orders = () => {
         setUser(parsedUser);
 
         const token = localStorage.getItem('token') || sessionStorage.getItem('token');
-        const response = await axios.get('http://localhost:5000/api/manufacturer/orders', {
+        const response = await axios.get(`${API_MANUFACTURER}/orders`, {
           headers: { Authorization: `Bearer ${token}` }
         });
         setOrders(response.data.data || []);
@@ -64,7 +65,7 @@ const Orders = () => {
   const fetchOrders = async () => {
     try {
       const token = localStorage.getItem('token') || sessionStorage.getItem('token');
-      const response = await axios.get('http://localhost:5000/api/manufacturer/orders', {
+      const response = await axios.get(`${API_MANUFACTURER}/orders`, {
         headers: { Authorization: `Bearer ${token}` }
       });
       setOrders(response.data.data || []);
@@ -79,7 +80,7 @@ const Orders = () => {
       setProcessingOrderId(selectedOrder.b2b_order_id);
       const token = localStorage.getItem('token') || sessionStorage.getItem('token');
       await axios.post(
-        `http://localhost:5000/api/manufacturer/orders/${selectedOrder.b2b_order_id}/accept`,
+        `${API_MANUFACTURER}/orders/${selectedOrder.b2b_order_id}/accept`,
         { fulfillment_type: fulfillmentType },
         { headers: { Authorization: `Bearer ${token}` } }
       );
@@ -112,7 +113,7 @@ const Orders = () => {
         setProcessingOrderId(orderId);
         const token = localStorage.getItem('token') || sessionStorage.getItem('token');
         await axios.post(
-          `http://localhost:5000/api/manufacturer/orders/${orderId}/reject`,
+          `${API_MANUFACTURER}/orders/${orderId}/reject`,
           {},
           { headers: { Authorization: `Bearer ${token}` } }
         );
@@ -132,7 +133,7 @@ const Orders = () => {
         setProcessingOrderId(orderId);
         const token = localStorage.getItem('token') || sessionStorage.getItem('token');
         await axios.post(
-          `http://localhost:5000/api/manufacturer/orders/${orderId}/ship`,
+          `${API_MANUFACTURER}/orders/${orderId}/ship`,
           {},
           { headers: { Authorization: `Bearer ${token}` } }
         );

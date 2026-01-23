@@ -6,8 +6,7 @@ import {
   CheckCircle, Loader2, AlertCircle, Lock, Package,
   Pill, Smartphone, Apple, Shirt, Heart, Box, Wallet, Banknote, Building
 } from 'lucide-react';
-
-const API_BASE = 'http://localhost:5000/api';
+import { API_BASE } from '../config/api';
 
 // Category icon component using Lucide icons
 const CategoryIcon = ({ category, size = 24, className = "" }) => {

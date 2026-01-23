@@ -475,21 +475,8 @@ export const confirmOrderReceived = async (req, res) => {
       throw new Error(`Cannot confirm receipt for order with status: ${order.status}`);
     }
 
-    // Get order items
-    const [items] = await connection.query(
-      'SELECT product_def_id, quantity FROM Order_Items WHERE order_id = ?',
-      [orderId]
-    );
-
-    // Deduct from retailer inventory
-    for (const item of items) {
-      await connection.query(
-        `UPDATE Inventory 
-         SET quantity_on_hand = quantity_on_hand - ? 
-         WHERE outlet_id = ? AND product_def_id = ?`,
-        [item.quantity, order.outlet_id, item.product_def_id]
-      );
-    }
+    // Note: Stock was already deducted when retailer approved the order (acceptCustomerOrder)
+    // So we only update the order status here, not the inventory
 
     // Update order status to Completed
     await connection.query(

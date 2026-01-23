@@ -4,8 +4,9 @@ import axios from 'axios';
 import Layout from '../Layout';
 import { Truck, MapPin, Package } from 'lucide-react';
 import { manufacturerMenuItems } from './menu';
+import { API_MANUFACTURER } from '../../config/api';
 
-const API_BASE = 'http://localhost:5000/api/manufacturer';
+const API_BASE = API_MANUFACTURER;
 
 const Shipments = () => {
   const navigate = useNavigate();

@@ -13,8 +13,9 @@ import {
   X,
   Loader2
 } from 'lucide-react';
+import { API_SETTINGS } from '../../config/api';
 
-const API_BASE = 'http://localhost:5000/api/settings';
+const API_BASE = API_SETTINGS;
 
 const Settings = ({ menuItems, roleCheck }) => {
   const navigate = useNavigate();

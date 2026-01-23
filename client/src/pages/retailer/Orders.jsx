@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import Layout from '../Layout';
 import { Package, Plus, Store, ChevronDown, ChevronUp } from 'lucide-react';
 import { retailerMenuItems } from './menu';
+import { API_RETAILER } from '../../config/api';
 
 const Orders = () => {
   const navigate = useNavigate();
@@ -42,8 +43,8 @@ const Orders = () => {
         console.log('[Orders] Fetching from /api/retailer/orders and /api/retailer/manufacturers');
         
         const [ordersRes, manufacturersRes] = await Promise.all([
-          fetch('http://localhost:5000/api/retailer/orders', { headers }),
-          fetch('http://localhost:5000/api/retailer/manufacturers', { headers })
+          fetch(`${API_RETAILER}/orders`, { headers }),
+          fetch(`${API_RETAILER}/manufacturers`, { headers })
         ]);
         
         console.log('[Orders] Orders response status:', ordersRes.status);
@@ -95,7 +96,7 @@ const Orders = () => {
       const token = localStorage.getItem('token') || sessionStorage.getItem('token');
       console.log('[Orders] Token available for product fetch:', !!token);
       
-      const response = await fetch(`http://localhost:5000/api/retailer/manufacturers/${manufacturerId}/products`, {
+      const response = await fetch(`${API_RETAILER}/manufacturers/${manufacturerId}/products`, {
         headers: { 'Authorization': `Bearer ${token}` }
       });
       
@@ -166,7 +167,7 @@ const Orders = () => {
         }))
       };
 
-      const response = await fetch('http://localhost:5000/api/retailer/orders', {
+      const response = await fetch(`${API_RETAILER}/orders`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -181,7 +182,7 @@ const Orders = () => {
         setSelectedManufacturer(null);
         setManufacturerProducts([]);
         // Refresh orders
-        const ordersResponse = await fetch('http://localhost:5000/api/retailer/orders', {
+        const ordersResponse = await fetch(`${API_RETAILER}/orders`, {
           headers: { 'Authorization': `Bearer ${token}` }
         });
         const ordersData = await ordersResponse.json();

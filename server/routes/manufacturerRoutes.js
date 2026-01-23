@@ -11,7 +11,9 @@ import {
     shipOrder,
     getShipments,
     getAlerts,
-    getLedger
+    getLedger,
+    generateProductQR,
+    generateBatchQRCodes
 } from '../controllers/manufacturerController.js';
 import { verifyToken, verifyManufacturer } from '../middleware/authMiddleware.js';
 
@@ -31,6 +33,10 @@ router.post('/products', addProduct);
 // Production (Batches with QR hash generation)
 router.get('/production', getProduction);
 router.post('/production', createProduction);
+
+// QR Code Generation
+router.get('/qr/:item_id', generateProductQR);
+router.get('/batch/:batch_id/qr-codes', generateBatchQRCodes);
 
 // B2B Orders
 router.get('/orders', getOrders);
