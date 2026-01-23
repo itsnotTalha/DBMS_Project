@@ -44,12 +44,8 @@ const Register = () => {
     }
 
     try {
-<<<<<<< HEAD
-      const response = await fetch('http://localhost:5000/api/auth/register', {
-=======
       // Connects to your backend route defined in authRoutes.js
       const response = await fetch(`${API_AUTH}/register`, {
->>>>>>> upstream/remoteServ
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ ...formData, role }),
