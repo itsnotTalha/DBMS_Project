@@ -21,6 +21,11 @@ router.get('/dashboard', verifyRetailer, retailerController.getDashboardMetrics)
 router.get('/dashboard/stats', verifyRetailer, retailerController.getDashboardStats);
 
 // ============================================
+// NOTIFICATION COUNTS (for menu badges)
+// ============================================
+router.get('/notifications/counts', verifyRetailer, retailerController.getNotificationCounts);
+
+// ============================================
 // MANUFACTURERS ROUTES
 // ============================================
 router.get('/manufacturers', verifyRetailer, retailerController.getManufacturers);

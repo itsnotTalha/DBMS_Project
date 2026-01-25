@@ -13,7 +13,8 @@ import {
     getAlerts,
     getLedger,
     generateProductQR,
-    generateBatchQRCodes
+    generateBatchQRCodes,
+    getNotificationCounts
 } from '../controllers/manufacturerController.js';
 import { verifyToken, verifyManufacturer } from '../middleware/authMiddleware.js';
 
@@ -25,6 +26,9 @@ router.use(verifyManufacturer);
 
 // Dashboard
 router.get('/dashboard', getDashboardStats);
+
+// Notification Counts (for menu badges)
+router.get('/notifications/counts', getNotificationCounts);
 
 // Products (Blueprints)
 router.get('/products', getProducts);

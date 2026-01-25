@@ -630,3 +630,32 @@ export const generateBatchQRCodes = async (req, res) => {
         res.status(500).json({ error: error.message });
     }
 };
+
+// ============================================================
+// NOTIFICATION BADGES / COUNTS
+// ============================================================
+
+export const getNotificationCounts = async (req, res) => {
+    try {
+        const manufacturer_id = req.user.id;
+
+        const [[counts]] = await db.query(`
+            SELECT 
+                (SELECT COUNT(*) FROM B2B_Orders WHERE manufacturer_id = ? AND status = 'Pending') as pending_orders,
+                (SELECT COUNT(*) FROM B2B_Orders WHERE manufacturer_id = ? AND status = 'Approved') as ready_to_ship,
+                (SELECT COUNT(*) FROM IoT_Alerts ia 
+                 JOIN Product_Items pi ON ia.item_id = pi.item_id
+                 JOIN Batches b ON pi.batch_id = b.batch_id
+                 WHERE b.manufacturer_id = ? AND ia.is_resolved = FALSE) as active_alerts
+        `, [manufacturer_id, manufacturer_id, manufacturer_id]);
+
+        res.json({
+            orders: counts.pending_orders || 0,
+            shipments: counts.ready_to_ship || 0,
+            alerts: counts.active_alerts || 0
+        });
+    } catch (error) {
+        console.error('Error fetching notification counts:', error);
+        res.status(500).json({ error: error.message });
+    }
+};

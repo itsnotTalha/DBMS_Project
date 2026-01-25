@@ -1,6 +1,7 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 // CHANGED: Added Link to react-router-dom imports
 import { useNavigate, useLocation, Link } from 'react-router-dom';
+import axios from 'axios';
 // CHANGED: Removed Link from lucide-react imports to avoid conflict
 import { 
   LogOut, Menu, X, ChevronDown, LayoutDashboard, Package, Truck, 
@@ -8,12 +9,63 @@ import {
   Thermometer, ShieldCheck, User, LifeBuoy, Lock, AlertTriangle, 
   History, Receipt, FlaskConical, Settings, Database 
 } from 'lucide-react';
+import { API_MANUFACTURER, API_RETAILER } from '../config/api';
 
 const Layout = ({ children, user, menuItems }) => {
   const navigate = useNavigate();
   const location = useLocation();
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
   const [userMenuOpen, setUserMenuOpen] = useState(false);
+  const [notificationCounts, setNotificationCounts] = useState({});
+
+  // --- Fetch notification counts ---
+  useEffect(() => {
+    const fetchNotificationCounts = async () => {
+      const token = localStorage.getItem('token') || sessionStorage.getItem('token');
+      if (!token || !user?.role) return;
+
+      try {
+        let endpoint = '';
+        if (user.role === 'Manufacturer') {
+          endpoint = `${API_MANUFACTURER}/notifications/counts`;
+        } else if (user.role === 'Retailer') {
+          endpoint = `${API_RETAILER}/notifications/counts`;
+        } else {
+          return; // No notifications for other roles yet
+        }
+
+        const response = await axios.get(endpoint, {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+        setNotificationCounts(response.data);
+      } catch (error) {
+        console.error('Error fetching notification counts:', error);
+      }
+    };
+
+    fetchNotificationCounts();
+    // Refresh every 30 seconds
+    const interval = setInterval(fetchNotificationCounts, 30000);
+    return () => clearInterval(interval);
+  }, [user?.role]);
+
+  // --- Get badge count for a menu path ---
+  const getBadgeCount = (path) => {
+    if (!notificationCounts) return 0;
+    
+    // Manufacturer badge mappings
+    if (path.includes('/manufacturer/orders')) return notificationCounts.orders || 0;
+    if (path.includes('/manufacturer/shipments')) return notificationCounts.shipments || 0;
+    if (path.includes('/manufacturer/iot-alerts')) return notificationCounts.alerts || 0;
+    
+    // Retailer badge mappings
+    if (path.includes('/retailer/customer-orders')) return notificationCounts.customerOrders || 0;
+    if (path.includes('/retailer/shipments')) return notificationCounts.shipments || 0;
+    if (path.includes('/retailer/alerts')) return notificationCounts.alerts || 0;
+    if (path.includes('/retailer/orders') && !path.includes('customer')) return notificationCounts.orders || 0;
+    
+    return 0;
+  };
 
   // --- 1. Strict Active State Logic ---
   const isActive = (menuPath) => {
@@ -134,21 +186,40 @@ const Layout = ({ children, user, menuItems }) => {
         {/* Navigation */}
         <nav className="flex-1 px-3 py-6 space-y-2 overflow-y-auto">
           {currentMenuItems.length > 0 ? (
-            currentMenuItems.map((item) => (
-              <button
-                key={item.path}
-                onClick={() => navigate(item.path)}
-                className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-semibold transition ${
-                  isActive(item.path)
-                    ? 'bg-emerald-500 text-white shadow-lg'
-                    : 'text-slate-400 hover:bg-slate-800 hover:text-white'
-                }`}
-                title={!isSidebarOpen ? item.label : ''}
-              >
-                <span className="flex-shrink-0">{item.icon}</span>
-                {isSidebarOpen && <span className="truncate">{item.label}</span>}
-              </button>
-            ))
+            currentMenuItems.map((item) => {
+              const badgeCount = getBadgeCount(item.path);
+              return (
+                <button
+                  key={item.path}
+                  onClick={() => navigate(item.path)}
+                  className={`w-full flex items-center gap-3 px-4 py-3 rounded-lg text-sm font-semibold transition relative ${
+                    isActive(item.path)
+                      ? 'bg-emerald-500 text-white shadow-lg'
+                      : 'text-slate-400 hover:bg-slate-800 hover:text-white'
+                  }`}
+                  title={!isSidebarOpen ? item.label : ''}
+                >
+                  <span className="flex-shrink-0 relative">
+                    {item.icon}
+                    {badgeCount > 0 && !isSidebarOpen && (
+                      <span className="absolute -top-2 -right-2 min-w-[18px] h-[18px] bg-red-500 text-white text-[10px] font-bold rounded-full flex items-center justify-center px-1 shadow-lg animate-pulse">
+                        {badgeCount > 99 ? '99+' : badgeCount}
+                      </span>
+                    )}
+                  </span>
+                  {isSidebarOpen && (
+                    <>
+                      <span className="truncate flex-1">{item.label}</span>
+                      {badgeCount > 0 && (
+                        <span className="min-w-[20px] h-[20px] bg-red-500 text-white text-[10px] font-bold rounded-full flex items-center justify-center px-1.5 shadow-lg animate-pulse">
+                          {badgeCount > 99 ? '99+' : badgeCount}
+                        </span>
+                      )}
+                    </>
+                  )}
+                </button>
+              );
+            })
           ) : (
             <p className="text-slate-500 text-xs px-4 py-2">No menu items</p>
           )}

@@ -1225,6 +1225,62 @@ export const getPendingCustomerOrders = async (req, res) => {
   }
 };
 
+// ============================================
+// NOTIFICATION COUNTS (for menu badges)
+// ============================================
+export const getNotificationCounts = async (req, res) => {
+  try {
+    const retailerId = req.user.id;
+
+    // Get outlet_id for this retailer
+    const [[outlet]] = await db.query(
+      'SELECT outlet_id FROM Retailer_Outlets WHERE retailer_id = ? LIMIT 1',
+      [retailerId]
+    );
+    const outletId = outlet?.outlet_id;
+
+    // Pending customer orders
+    const [[{ pending_customer_orders }]] = await db.query(
+      `SELECT COUNT(*) as pending_customer_orders
+       FROM Customer_Orders co
+       JOIN Retailer_Outlets ro ON co.outlet_id = ro.outlet_id
+       WHERE ro.retailer_id = ? AND co.status = 'Processing'`,
+      [retailerId]
+    );
+
+    // Incoming shipments (B2B orders that are shipped but not delivered)
+    const [[{ incoming_shipments }]] = await db.query(
+      `SELECT COUNT(*) as incoming_shipments
+       FROM B2B_Orders WHERE retailer_id = ? AND status = 'Shipped'`,
+      [retailerId]
+    );
+
+    // Low stock alerts
+    const [[{ low_stock_count }]] = await db.query(
+      `SELECT COUNT(*) as low_stock_count
+       FROM Inventory WHERE outlet_id = ? AND quantity_on_hand < 10 AND quantity_on_hand > 0`,
+      [outletId || 0]
+    );
+
+    // My B2B orders pending
+    const [[{ my_orders_pending }]] = await db.query(
+      `SELECT COUNT(*) as my_orders_pending
+       FROM B2B_Orders WHERE retailer_id = ? AND status IN ('Pending', 'Approved')`,
+      [retailerId]
+    );
+
+    res.json({
+      customerOrders: pending_customer_orders || 0,
+      shipments: incoming_shipments || 0,
+      alerts: low_stock_count || 0,
+      orders: my_orders_pending || 0
+    });
+  } catch (error) {
+    console.error('Get notification counts error:', error);
+    res.status(500).json({ error: error.message });
+  }
+};
+
 export default {
   getDashboardStats,
   getManufacturers,
@@ -1244,5 +1300,6 @@ export default {
   getCustomerOrdersForRetailer,
   acceptCustomerOrder,
   rejectCustomerOrder,
-  getPendingCustomerOrders
+  getPendingCustomerOrders,
+  getNotificationCounts
 };
