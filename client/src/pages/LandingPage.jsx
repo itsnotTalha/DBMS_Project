@@ -548,6 +548,9 @@ const LandingPage = () => {
               <p className="text-slate-400 text-sm">
                 Blockchain-Enhanced Supply Security
               </p>
+              <Link to="/about" className="text-emerald-400 hover:text-emerald-300 text-sm font-medium transition-colors flex items-center gap-1">
+              About Us
+            </Link>
             </div>
             <div>
               <h4 className="font-semibold mb-4">For Customers</h4>
@@ -570,8 +573,10 @@ const LandingPage = () => {
               </p>
             </div>
           </div>
-          <div className="border-t border-slate-800 mt-8 pt-8 text-center text-slate-400 text-sm">
-            © 2026 BESS-PAS. All rights reserved.
+          <div className="border-t border-slate-800 mt-8 pt-8 flex flex-col md:flex-row items-center justify-between gap-4">
+            <p className="text-slate-400 text-sm">
+              © 2026 BESS-PAS. All rights reserved.
+            </p>
           </div>
         </div>
       </footer>

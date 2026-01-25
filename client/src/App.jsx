@@ -4,6 +4,7 @@ import Register from './pages/Auth/Register';
 import LandingPage from './pages/LandingPage';
 import BusinessLandingPage from './pages/BusinessLandingPage';
 import PublicVerify from './pages/PublicVerify';
+import AboutUs from './pages/AboutUs';
 import SimpleAuthLayout from './pages/Auth/SimpleAuthLayout';
 
 // Manufacturer Pages
@@ -118,6 +119,7 @@ function App() {
 
         {/* Default Route */}
         <Route path="/" element={<LandingPage />} />
+        <Route path="/about" element={<AboutUs />} />
         <Route path="/business" element={<BusinessLandingPage />} />
         <Route path="/verify/:code" element={<PublicVerify />} />
         <Route path="/verify" element={<PublicVerify />} />
