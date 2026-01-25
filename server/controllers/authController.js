@@ -7,10 +7,6 @@ const generateToken = (id, role) => {
   return jwt.sign({ id, role }, process.env.JWT_SECRET, { expiresIn: '30d' });
 };
 
-// ------------------------------------------------------------------
-// REGISTER USER (Transactional)
-// Handles creating the base User AND the specific role entry (e.g., Manufacturer)
-// ------------------------------------------------------------------
 export const registerUser = async (req, res) => {
   const connection = await db.getConnection(); // Get dedicated connection for transaction
   

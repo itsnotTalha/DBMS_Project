@@ -143,8 +143,6 @@ export const getDashboardStats = async (req, res) => {
 // --- 6. Recent Activity (NEW - REQUIRED FOR DASHBOARD) ---
 export const getRecentActivity = async (req, res) => {
   try {
-    // We will fake "activity" by showing the latest users who joined
-    // This prevents the frontend from crashing if you don't have an activity log table
     const query = `
       SELECT 
         u.email as user_name,

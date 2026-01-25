@@ -371,7 +371,6 @@ export const getCustomerReports = async (req, res) => {
 
 // ------------------------------------------------------------------
 // PLACE CUSTOMER ORDER
-// Order starts as 'Processing' - stock is NOT deducted until customer confirms receipt
 // ------------------------------------------------------------------
 export const placeOrder = async (req, res) => {
   const connection = await db.getConnection();
@@ -449,7 +448,6 @@ export const placeOrder = async (req, res) => {
 
 // ------------------------------------------------------------------
 // CONFIRM ORDER RECEIVED
-// Customer confirms receipt - this triggers stock deduction
 // ------------------------------------------------------------------
 export const confirmOrderReceived = async (req, res) => {
   const connection = await db.getConnection();
@@ -475,10 +473,6 @@ export const confirmOrderReceived = async (req, res) => {
       throw new Error(`Cannot confirm receipt for order with status: ${order.status}`);
     }
 
-    // Note: Stock was already deducted when retailer approved the order (acceptCustomerOrder)
-    // So we only update the order status here, not the inventory
-
-    // Update order status to Completed
     await connection.query(
       'UPDATE Customer_Orders SET status = ? WHERE order_id = ?',
       ['Completed', orderId]
